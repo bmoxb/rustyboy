@@ -20,10 +20,20 @@ impl Cpu {
     }
 
     pub fn cycle(&mut self, mem: &mut Memory) -> usize {
+        log::trace!("begin cycle - {}", self.regs);
+
         let opcode = Opcode {
             value: self.read_byte_pc(mem),
         };
-        self.execute(opcode, mem)
+
+        log::trace!("fetched opcode {0:#04X} ({0:#010b}) from address {1:#04X}", opcode.value, self.regs.pc - 1);
+
+        let cycles_taken = self.execute(opcode, mem);
+
+        log::trace!("executed instruction with opcode {0:#04X} ({0:#010b}) taking {1} machine cycle(s)", opcode.value, cycles_taken);
+        log::trace!("end cycle - {}", self.regs);
+
+        cycles_taken
     }
 
     fn execute(&mut self, opcode: Opcode, mem: &mut Memory) -> usize {
@@ -32,7 +42,7 @@ impl Cpu {
             // 8-bit load instructions
             //
 
-            // ld r, r
+            // LD r, r
             0x40..=0x45
             | 0x47..=0x4D
             | 0x4F..=0x55

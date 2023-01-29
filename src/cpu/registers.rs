@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Default)]
 pub struct Registers {
     pub a: u8,
@@ -110,6 +112,30 @@ impl Registers {
     }
 }
 
+impl fmt::Display for Registers {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "A: {:#04X}, F: {:#04X} (Z={}, N={}, H={}, C={}), B: {:#04X}, C: {:#04X}, D: {:#04X}, E: {:#04X}, H: {:#04X}, L: {:#04X}, SP: {:#06X}, PC: {:#06X}",
+            self.a,
+            self.f,
+            self.flag(Flag::Zero) as u8,
+            self.flag(Flag::Subtraction) as u8,
+            self.flag(Flag::HalfCarry) as u8,
+            self.flag(Flag::Carry) as u8,
+            self.b,
+            self.c,
+            self.d,
+            self.e,
+            self.h,
+            self.l,
+            self.sp,
+            self.pc,
+        )
+    }
+}
+
+#[derive(Clone, Copy)]
 pub enum Flag {
     Zero,
     Subtraction,
