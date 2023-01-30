@@ -8,4 +8,6 @@ fn main() {
     let mut cpu = cpu::Cpu::new();
 
     cpu.cycle(&mut mem);
+
+    mem.write16(0x1234, 0xDEAD);
 }

@@ -65,92 +65,92 @@ impl Cpu {
 
             // LD r, [HL]
             0x46 | 0x4E | 0x56 | 0x5E | 0x66 | 0x6E | 0x7E => {
-                self.regs.set8(opcode.dst8(), mem[self.regs.hl()]);
+                self.regs.set8(opcode.dst8(), mem.read8(self.regs.hl()));
                 2
             }
 
             // LD [HL], r
             0x70..=0x75 | 0x77 => {
-                mem[self.regs.hl()] = self.regs.get8(opcode.src8());
+                mem.write8(self.regs.hl(), self.regs.get8(opcode.src8()));
                 2
             }
 
             // LD [HL], n
             0x36 => {
-                mem[self.regs.hl()] = self.read_byte_pc(mem);
+                mem.write8(self.regs.hl(), self.read_byte_pc(mem));
                 3
             }
 
             // LD A, [BC]
             0x0A => {
-                self.regs.a = mem[self.regs.bc()];
+                self.regs.a = mem.read8(self.regs.bc());
                 2
             }
 
             // LD A, [DE]
             0x1A => {
-                self.regs.a = mem[self.regs.de()];
+                self.regs.a = mem.read8(self.regs.de());
                 2
             }
 
             // LD [BC], A
             0x02 => {
-                mem[self.regs.bc()] = self.regs.a;
+                mem.write8(self.regs.bc(), self.regs.a);
                 2
             }
 
             // LD [DE], A
             0x12 => {
-                mem[self.regs.de()] = self.regs.a;
+                mem.write8(self.regs.de(), self.regs.a);
                 2
             }
 
             // LD A, [nn]
             0xFA => {
                 let nn = self.read_word_pc(mem);
-                self.regs.a = mem[nn];
+                self.regs.a = mem.read8(nn);
                 4
             }
 
             // LD [nn], A
             0xEA => {
                 let nn = self.read_word_pc(mem);
-                mem[nn] = self.regs.a;
+                mem.write8(nn, self.regs.a);
                 4
             }
 
             // LDH A, [C]
             0xF2 => {
                 let addr = 0xFF00 + (self.regs.c as u16);
-                self.regs.a = mem[addr];
+                self.regs.a = mem.read8(addr);
                 2
             }
 
             // LDH [C], A
             0xE2 => {
                 let addr = 0xFF00 + (self.regs.c as u16);
-                mem[addr] = self.regs.a;
+                mem.write8(addr, self.regs.a);
                 2
             }
 
             // LDH A, [n]
             0xF0 => {
                 let addr = 0xFF00 + (self.read_byte_pc(mem) as u16);
-                self.regs.a = mem[addr];
+                self.regs.a = mem.read8(addr);
                 3
             }
 
             // LDH [n], A
             0xE0 => {
                 let addr = 0xFF00 + (self.read_byte_pc(mem) as u16);
-                mem[addr] = self.regs.a;
+                mem.write8(addr, self.regs.a);
                 3
             }
 
             // LD A, [HL-]
             0x3A => {
                 let hl = self.regs.hl();
-                self.regs.a = mem[hl];
+                self.regs.a = mem.read8(hl);
                 self.regs.set_hl(hl - 1);
                 2
             }
@@ -158,7 +158,7 @@ impl Cpu {
             // LD [HL-], A
             0x32 => {
                 let hl = self.regs.hl();
-                mem[hl] = self.regs.a;
+                mem.write8(hl, self.regs.a);
                 self.regs.set_hl(hl - 1);
                 2
             }
@@ -166,7 +166,7 @@ impl Cpu {
             // LD A, [HL+]
             0x2A => {
                 let hl = self.regs.hl();
-                self.regs.a = mem[hl];
+                self.regs.a = mem.read8(hl);
                 self.regs.set_hl(hl + 1);
                 2
             }
@@ -174,7 +174,7 @@ impl Cpu {
             // LD [HL+], A
             0x22 => {
                 let hl = self.regs.hl();
-                mem[hl] = self.regs.a;
+                mem.write8(hl, self.regs.a);
                 self.regs.set_hl(hl + 1);
                 2
             }
@@ -230,7 +230,7 @@ impl Cpu {
 
             // ADD [HL]
             0x86 => {
-                let value = mem[self.regs.hl()];
+                let value = mem.read8(self.regs.hl());
                 self.regs.a = self.add_with_flags_updated(self.regs.a, value);
                 2
             }
@@ -322,7 +322,8 @@ impl Cpu {
 
             // INC [HL]
             0x34 => {
-                mem[self.regs.hl()] = self.add_with_flags_updated(mem[self.regs.hl()], 1);
+                let hl = self.regs.hl();
+                mem.write8(hl, self.add_with_flags_updated(mem.read8(hl), 1));
                 3
             }
 
@@ -452,15 +453,15 @@ impl Cpu {
     }
 
     fn read_byte_pc(&mut self, mem: &Memory) -> u8 {
-        let value = mem[self.regs.pc];
+        let value = mem.read8(self.regs.pc);
         self.regs.pc += 1;
         value
     }
 
     fn read_word_pc(&mut self, mem: &Memory) -> u16 {
-        let lsb = self.read_byte_pc(mem) as u16;
-        let msb = self.read_byte_pc(mem) as u16;
-        (msb << 8) + lsb
+        let value = mem.read16(self.regs.pc);
+        self.regs.pc += 2;
+        value
     }
 
     fn add_with_flags_updated(&mut self, x: u8, y: u8) -> u8 {
@@ -468,8 +469,7 @@ impl Cpu {
 
         self.regs.set_flag(Flag::Zero, sum == 0);
         self.regs.set_flag(Flag::Subtraction, false);
-        self.regs
-            .set_flag(Flag::HalfCarry, (x & 0x0F) + (y & 0x0F) > 0x0F);
+        self.regs.set_flag(Flag::HalfCarry, (x & 0x0F) + (y & 0x0F) > 0x0F);
         self.regs.set_flag(Flag::Carry, carry);
 
         sum
