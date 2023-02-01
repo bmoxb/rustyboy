@@ -154,17 +154,19 @@ impl Flags {
         (self.value & (1 << flag.bit())) != 0
     }
 
-    pub fn set(&mut self, flag: Flag, value: bool) {
+    pub fn set(&mut self, flag: Flag, value: bool) -> &mut Self {
         let mask = 1 << flag.bit();
         if value {
             self.value |= mask;
         } else {
             self.value &= !mask;
         }
+        self
     }
 
-    pub fn toggle(&mut self, flag: Flag) {
+    pub fn toggle(&mut self, flag: Flag) -> &mut Self {
         self.value ^= 1 << flag.bit();
+        self
     }
 }
 

@@ -4,11 +4,11 @@ pub struct Opcode {
 }
 
 impl Opcode {
-    pub fn dst8(&self) -> u8 {
+    pub fn xxx(&self) -> u8 {
         (self.value >> 3) & 0b11
     }
 
-    pub fn src8(&self) -> u8 {
+    pub fn yyy(&self) -> u8 {
         self.value & 0b111
     }
 
