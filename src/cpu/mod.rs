@@ -64,7 +64,7 @@ impl Cpu {
 
             // LD r, n
             // 0b00xxx110
-            0x06 | 0x0E | 0x16 | 0x1E | 0x26 | 0x2E => {
+            0x06 | 0x0E | 0x16 | 0x1E | 0x26 | 0x2E | 0x3E => {
                 let n = self.fetch8(mem);
                 self.regs.set8(opcode.xxx(), n);
                 2
@@ -194,7 +194,7 @@ impl Cpu {
             // 0b00xx0001
             0x01 | 0x11 | 0x21 | 0x31 => {
                 let nn = self.fetch16(mem);
-                self.regs.set16_with_sp(opcode.reg16(), nn);
+                self.regs.set16_with_sp(opcode.rr(), nn);
                 3
             }
 
@@ -220,7 +220,7 @@ impl Cpu {
             // PUSH rr
             // 0b11xx0101
             0xC5 | 0xD5 | 0xE5 | 0xF5 => {
-                self.stack_push(mem, self.regs.get16_with_af(opcode.reg16()));
+                self.stack_push(mem, self.regs.get16_with_af(opcode.rr()));
                 4
             }
 
@@ -228,7 +228,7 @@ impl Cpu {
             // 0b11xx0001
             0xC1 | 0xD1 | 0xE1 | 0xF1 => {
                 let value = self.stack_pop(mem);
-                self.regs.set16_with_af(opcode.reg16(), value);
+                self.regs.set16_with_af(opcode.rr(), value);
                 3
             }
 
@@ -350,7 +350,7 @@ impl Cpu {
             // 0b00xx1001
             0x09 | 0x19 | 0x29 | 0x39 => {
                 let hl = self.regs.hl();
-                let rr = self.regs.get16_with_sp(opcode.reg16());
+                let rr = self.regs.get16_with_sp(opcode.rr());
                 let result = alu::add16(&mut self.regs.flags, hl, rr);
                 self.regs.set_hl(result);
                 2
@@ -358,15 +358,15 @@ impl Cpu {
 
             // INC rr
             0x03 | 0x13 | 0x23 | 0x33 => {
-                let rr = self.regs.get16_with_sp(opcode.reg16());
-                self.regs.set16_with_sp(opcode.reg16(), rr.wrapping_add(1));
+                let rr = self.regs.get16_with_sp(opcode.rr());
+                self.regs.set16_with_sp(opcode.rr(), rr.wrapping_add(1));
                 2
             }
 
             // DEC rr
             0x0B | 0x1B | 0x2B | 0x3B => {
-                let rr = self.regs.get16_with_sp(opcode.reg16());
-                self.regs.set16_with_sp(opcode.reg16(), rr.wrapping_sub(1));
+                let rr = self.regs.get16_with_sp(opcode.rr());
+                self.regs.set16_with_sp(opcode.rr(), rr.wrapping_sub(1));
                 2
             }
 
@@ -418,7 +418,73 @@ impl Cpu {
                 1
             }
 
-            // TODO: more jump instructions
+            // JP flag, nn
+            0xC2 | 0xCA | 0xD2 | 0xDA => {
+                let nn = self.fetch16(mem);
+
+                if self.evaluate_flag_condition(opcode.ff()) {
+                    self.regs.pc = nn;
+                    4
+                } else {
+                    3
+                }
+            }
+
+            // JR n
+            0x18 => {
+                let n = self.fetch8(mem); // TODO: signed
+                self.regs.pc += n as u16;
+                3
+            }
+
+            // JR flag, n
+            0x20 | 0x28 | 0x30 | 0x38 => {
+                let n = self.fetch8(mem); // TODO: signed
+
+                if self.evaluate_flag_condition(opcode.ff()) {
+                    self.regs.pc += n as u16;
+                    3
+                } else {
+                    2
+                }
+            }
+
+            // CALL nn
+            0xCD => {
+                let _nn = self.fetch16(mem);
+                // TODO
+                6
+            }
+
+            // CALL flag, nn
+            0xC4 | 0xCC | 0xD4 | 0xDC => {
+                // TODO
+                6 // or 4
+            }
+
+            // RET
+            0xC9 => {
+                // TODO
+                4
+            }
+
+            // RET flag
+            0xC0 | 0xC8 | 0xD0 | 0xD8 => {
+                // TODO
+                4 // or 2
+            }
+
+            // RETI
+            0xD9 => {
+                // TODO
+                4
+            }
+
+            // RST ?
+            0xC7 | 0xCF | 0xD7 | 0xDF | 0xE7 | 0xEF | 0xF7 | 0xFF => {
+                // TODO
+                4
+            }
 
             // --- CPU CONTROL INSTRUCTIONS ---
 
@@ -483,7 +549,7 @@ impl Cpu {
                 self.execute_cb(suffix)
             }
 
-            _ => {
+            0xD3 | 0xDB | 0xDD | 0xE3 | 0xE4 | 0xEB | 0xEC | 0xED | 0xF4 | 0xFC | 0xFD => {
                 log::warn!("unknown opcode {} encountered", opcode);
                 1
             }
@@ -755,6 +821,15 @@ impl Cpu {
         let value = mem.read8(self.regs.hl());
         mem.write8(self.regs.hl(), alu_func(&mut self.regs.flags, value, 1));
         3
+    }
+
+    fn evaluate_flag_condition(&self, ff: u8) -> bool {
+        match ff {
+            0 => !self.regs.flags.get(Flag::Zero),
+            1 => !self.regs.flags.get(Flag::Zero),
+            2 => self.regs.flags.get(Flag::Carry),
+            _ => panic!("{ff} is an unknown flag condition"),
+        }
     }
 }
 

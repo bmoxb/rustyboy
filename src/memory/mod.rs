@@ -13,7 +13,12 @@ impl Memory {
     }
 
     pub fn write8(&mut self, addr: u16, value: u8) {
-        log::trace!("at memory address {:#06X}, writing byte {:#04X} (replacing previous value {:#04X})", addr, value, self.read8(addr));
+        log::trace!(
+            "at memory address {:#06X}, writing byte {:#04X} (replacing previous value {:#04X})",
+            addr,
+            value,
+            self.read8(addr)
+        );
         self.mem[addr as usize] = value;
     }
 
@@ -24,7 +29,12 @@ impl Memory {
     }
 
     pub fn write16(&mut self, addr: u16, value: u16) {
-        log::trace!("at memory address {:#06X}, writing word {:#06X} (replacing previous value {:#06X})", addr, value, self.read16(addr));
+        log::trace!(
+            "at memory address {:#06X}, writing word {:#06X} (replacing previous value {:#06X})",
+            addr,
+            value,
+            self.read16(addr)
+        );
         self.mem[addr as usize] = (value & 0xFF) as u8; // little endian so LSB first
         self.mem[addr as usize + 1] = (value >> 8) as u8;
     }
