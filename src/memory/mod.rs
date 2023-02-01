@@ -23,9 +23,9 @@ impl Memory {
     }
 
     pub fn read16(&self, addr: u16) -> u16 {
-        let lsb = self.mem[addr as usize] as u16;
-        let msb = self.mem[addr as usize + 1] as u16;
-        (msb << 8) + lsb
+        let lsb = self.mem[addr as usize];
+        let msb = self.mem[addr as usize + 1];
+        u16::from_be_bytes([msb, lsb])
     }
 
     pub fn write16(&mut self, addr: u16, value: u16) {
