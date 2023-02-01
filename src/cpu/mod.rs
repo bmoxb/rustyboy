@@ -23,21 +23,19 @@ impl Cpu {
     pub fn cycle(&mut self, mem: &mut Memory) -> usize {
         log::trace!("begin cycle - {}", self.regs);
 
-        let opcode = Opcode {
-            value: self.fetch8(mem),
-        };
+        let opcode = Opcode(self.fetch8(mem));
 
         log::trace!(
-            "fetched opcode {0:#04X} ({0:#010b}) from address {1:#04X}",
-            opcode.value,
+            "fetched opcode {} from address {:#04X}",
+            opcode,
             self.regs.pc - 1
         );
 
         let cycles_taken = self.execute(opcode, mem);
 
         log::trace!(
-            "executed instruction with opcode {0:#04X} ({0:#010b}) taking {1} machine cycle(s)",
-            opcode.value,
+            "executed instruction with opcode {} taking {} machine cycle(s)",
+            opcode,
             cycles_taken
         );
         log::trace!("end cycle - {}", self.regs);
@@ -46,7 +44,7 @@ impl Cpu {
     }
 
     fn execute(&mut self, opcode: Opcode, mem: &mut Memory) -> usize {
-        match opcode.value {
+        match opcode.0 {
             // --- 8-BIT LOAD INSTRUCTIONS ---
 
             // LD r, r
@@ -486,7 +484,7 @@ impl Cpu {
             }
 
             _ => {
-                log::warn!("unknown opcode {0:#04X} encountered", opcode.value);
+                log::warn!("unknown opcode {} encountered", opcode);
                 1
             }
         }

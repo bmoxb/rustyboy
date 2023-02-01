@@ -24,7 +24,7 @@ impl Registers {
             4 => self.h,
             5 => self.l,
             6 => self.a,
-            7 => self.flags.value,
+            7 => self.flags.0,
             _ => panic!("8-bit register index {index} out of bounds"),
         }
     }
@@ -38,7 +38,7 @@ impl Registers {
             4 => &mut self.h,
             5 => &mut self.l,
             6 => &mut self.a,
-            7 => &mut self.flags.value,
+            7 => &mut self.flags.0,
             _ => panic!("8-bit register index {index} out of bounds"),
         };
         *reg = value;
@@ -78,23 +78,13 @@ impl Registers {
         }
     }
 
-    fn set16(&mut self, index: u8, value: u16) {
-        match index {
-            0 => self.set_bc(value),
-            1 => self.set_de(value),
-            2 => self.set_hl(value),
-            4 => {} // set in set16_with_sp and set16_with_af
-            _ => panic!("16-bit register index {index} out of bounds"),
-        }
-    }
-
     pub fn af(&self) -> u16 {
-        ((self.a as u16) << 8) + self.flags.value as u16
+        ((self.a as u16) << 8) + self.flags.0 as u16
     }
 
     pub fn set_af(&mut self, value: u16) {
         self.a = ((value >> 8) & 0xFF) as u8;
-        self.flags.value = (value & 0xFF) as u8;
+        self.flags.0 = (value & 0xFF) as u8;
     }
 
     pub fn bc(&self) -> u16 {
@@ -123,6 +113,16 @@ impl Registers {
         self.h = ((value >> 8) & 0xFF) as u8;
         self.l = (value & 0xFF) as u8;
     }
+
+    fn set16(&mut self, index: u8, value: u16) {
+        match index {
+            0 => self.set_bc(value),
+            1 => self.set_de(value),
+            2 => self.set_hl(value),
+            4 => {} // set in set16_with_sp and set16_with_af
+            _ => panic!("16-bit register index {index} out of bounds"),
+        }
+    }
 }
 
 impl fmt::Display for Registers {
@@ -145,27 +145,25 @@ impl fmt::Display for Registers {
 }
 
 #[derive(Default)]
-pub struct Flags {
-    value: u8,
-}
+pub struct Flags(u8);
 
 impl Flags {
     pub fn get(&self, flag: Flag) -> bool {
-        (self.value & (1 << flag.bit())) != 0
+        (self.0 & (1 << flag.bit())) != 0
     }
 
     pub fn set(&mut self, flag: Flag, value: bool) -> &mut Self {
         let mask = 1 << flag.bit();
         if value {
-            self.value |= mask;
+            self.0 |= mask;
         } else {
-            self.value &= !mask;
+            self.0 &= !mask;
         }
         self
     }
 
     pub fn toggle(&mut self, flag: Flag) -> &mut Self {
-        self.value ^= 1 << flag.bit();
+        self.0 ^= 1 << flag.bit();
         self
     }
 }
@@ -175,7 +173,7 @@ impl fmt::Display for Flags {
         write!(
             f,
             "{:#04X} (Z={}, N={}, H={}, C={})",
-            self.value,
+            self.0,
             self.get(Flag::Zero) as u8,
             self.get(Flag::Subtraction) as u8,
             self.get(Flag::HalfCarry) as u8,
