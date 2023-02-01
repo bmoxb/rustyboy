@@ -23,8 +23,8 @@ impl Registers {
             3 => self.e,
             4 => self.h,
             5 => self.l,
-            6 => self.a,
-            7 => self.flags.0,
+            6 => self.flags.0,
+            7 => self.a,
             _ => panic!("8-bit register index {index} out of bounds"),
         }
     }
@@ -37,8 +37,8 @@ impl Registers {
             3 => &mut self.e,
             4 => &mut self.h,
             5 => &mut self.l,
-            6 => &mut self.a,
-            7 => &mut self.flags.0,
+            6 => &mut self.flags.0,
+            7 => &mut self.a,
             _ => panic!("8-bit register index {index} out of bounds"),
         };
         *reg = value;

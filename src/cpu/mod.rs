@@ -478,8 +478,8 @@ impl Cpu {
 
             // CB prefix instructions
             0xCB => {
-                let suffix = self.fetch8(mem);
-                log::trace!("given 0xCB prefix, the full opcode is CB {:02X}", suffix);
+                let suffix = Opcode(self.fetch8(mem));
+                log::trace!("following the 0xCB prefix is {}", suffix);
                 self.execute_cb(suffix)
             }
 
@@ -490,8 +490,185 @@ impl Cpu {
         }
     }
 
-    fn execute_cb(&mut self, suffix: u8) -> usize {
-        unimplemented!() // TODO
+    fn execute_cb(&mut self, opcode: Opcode) -> usize {
+        match opcode.0 {
+            // --- ROTATE AND SHIFT INSTRUCTIONS ---
+
+            // RLC r
+            // 0b00000yyy
+            0x00..=0x05 | 0x07 => {
+                // TODO
+                2
+            }
+
+            // RLC [HL]
+            0x06 => {
+                // TODO
+                4
+            }
+
+            // RL r
+            // 0b00010yyy
+            0x10..=0x15 | 0x17 => {
+                // TODO
+                2
+            }
+
+            // RL [HL]
+            0x16 => {
+                // TODO
+                4
+            }
+
+            // RRC r
+            // 0b00001yyy
+            0x08..=0x0D | 0x0F => {
+                // TODO
+                2
+            }
+
+            // RRC [HL]
+            0x0E => {
+                // TODO
+                4
+            }
+
+            // RR r
+            // 0b00011yyy
+            0x18..=0x1D | 0x1F => {
+                // TODO
+                2
+            }
+
+            // RR [HL]
+            0x1E => {
+                // TODO
+                4
+            }
+
+            // SLA r
+            // 0b00100yyy
+            0x20..=0x25 | 0x27 => {
+                // TODO
+                2
+            }
+
+            // SLA [HL]
+            0x26 => {
+                // TODO
+                4
+            }
+
+            // SWAP r
+            // 0b00110yyy
+            0x30..=0x35 | 0x37 => {
+                // TODO
+                2
+            }
+
+            // SWAP [HL]
+            0x36 => {
+                // TODO
+                4
+            }
+
+            // SRA r
+            // 0b00101yyy
+            0x28..=0x2D | 0x2F => {
+                // TODO
+                2
+            }
+
+            // SRA [HL]
+            0x2E => {
+                // TODO
+                4
+            }
+
+            // SRL r
+            // 0b00111yyy
+            0x38..=0x3D | 0x3F => {
+                // TODO
+                2
+            }
+
+            // SRL [HL]
+            0x3E => {
+                // TODO
+                4
+            }
+
+            // --- SINGLE-BIT OPERATION INSTRUCTIONS ---
+
+            // BIT n, r
+            // 0b01xxxyyy
+            0x40..=0x45
+            | 0x47..=0x4D
+            | 0x4F..=0x55
+            | 0x57..=0x5D
+            | 0x5F..=0x65
+            | 0x67..=0x6D
+            | 0x6F..=0x75
+            | 0x77..=0x7D
+            | 0x7F => {
+                // TODO
+                2
+            }
+
+            // BIT n, [HL]
+            // 0b01xxx110
+            0x46 | 0x4E | 0x56 | 0x5E | 0x66 | 0x6E | 0x76 | 0x7E => {
+                // TODO
+                3
+            }
+
+            // SET n, r
+            // 0b11xxxyyy
+            0xC0..=0xC5
+            | 0xC7..=0xCD
+            | 0xCF..=0xD5
+            | 0xD7..=0xDD
+            | 0xDF..=0xE5
+            | 0xE7..=0xED
+            | 0xEF..=0xF5
+            | 0xF7..=0xFD
+            | 0xFF => {
+                let _n = opcode.xxx();
+                let _r = opcode.yyy();
+                // TODO
+                2
+            }
+
+            // SET n, [HL]
+            // 0b11xxx110
+            0xC6 | 0xCE | 0xD6 | 0xDE | 0xE6 | 0xEE | 0xF6 | 0xFE => {
+                let _n = opcode.xxx();
+                // TODO
+                4
+            }
+
+            // RES n, r
+            // 0b10xxxyyy
+            0x80..=0x85
+            | 0x87..=0x8D
+            | 0x8F..=0x95
+            | 0x97..=0x9D
+            | 0x9F..=0xA5
+            | 0xA7..=0xAD
+            | 0xAF..=0xB5
+            | 0xB7..=0xBD
+            | 0xBF => {
+                // TODO
+                2
+            }
+
+            // RES n, [HL]
+            // 0b10xxx110
+            0x86 | 0x8E | 0x96 | 0x9E | 0xA6 | 0xAE | 0xB6 | 0xBE => {
+                // TODO
+                4
+            }
+        }
     }
 
     fn fetch8(&mut self, mem: &Memory) -> u8 {
