@@ -1,15 +1,18 @@
 mod alu;
+mod ime;
 mod opcode;
 mod registers;
 
 use crate::memory::Memory;
 
+use ime::InterruptMasterEnable;
 use opcode::Opcode;
 use registers::{Flag, Flags, Registers};
 
 pub struct Cpu {
     regs: Registers,
     state: State,
+    ime: InterruptMasterEnable,
 }
 
 impl Cpu {
@@ -17,6 +20,7 @@ impl Cpu {
         Cpu {
             regs: Registers::default(),
             state: State::Running,
+            ime: InterruptMasterEnable::default(),
         }
     }
 
@@ -38,6 +42,9 @@ impl Cpu {
             opcode,
             cycles_taken
         );
+
+        self.ime.cycle();
+
         log::trace!("end cycle - {}", self.regs);
 
         cycles_taken
@@ -489,7 +496,7 @@ impl Cpu {
             // RETI
             0xD9 => {
                 self.regs.pc = self.stack_pop(mem);
-                // TODO: enable interrupts
+                self.ime.enable(0);
                 4
             }
 
@@ -538,6 +545,7 @@ impl Cpu {
                         "STOP instruction not followed by null byte - instead encountered {:#04X}",
                         n
                     );
+                    self.regs.pc -= 1;
                 }
                 self.state = State::Stopped;
                 1
@@ -545,13 +553,13 @@ impl Cpu {
 
             // DI
             0xF3 => {
-                // TODO
+                self.ime.disable(1);
                 1
             }
 
             // EI
             0xFB => {
-                // TODO
+                self.ime.enable(1);
                 1
             }
 
