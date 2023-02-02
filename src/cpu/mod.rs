@@ -451,32 +451,45 @@ impl Cpu {
 
             // CALL nn
             0xCD => {
-                let _nn = self.fetch16(mem);
-                // TODO
+                let nn = self.fetch16(mem);
+                self.stack_push(mem, self.regs.pc);
+                self.regs.pc = nn;
                 6
             }
 
             // CALL flag, nn
             0xC4 | 0xCC | 0xD4 | 0xDC => {
-                // TODO
-                6 // or 4
+                let nn = self.fetch16(mem);
+
+                if self.evaluate_flag_condition(opcode.ff()) {
+                    self.stack_push(mem, self.regs.pc);
+                    self.regs.pc = nn;
+                    6
+                } else {
+                    4
+                }
             }
 
             // RET
             0xC9 => {
-                // TODO
+                self.regs.pc = self.stack_pop(mem);
                 4
             }
 
             // RET flag
             0xC0 | 0xC8 | 0xD0 | 0xD8 => {
-                // TODO
-                4 // or 2
+                if self.evaluate_flag_condition(opcode.ff()) {
+                    self.regs.pc = self.stack_pop(mem);
+                    5
+                } else {
+                    2
+                }
             }
 
             // RETI
             0xD9 => {
-                // TODO
+                self.regs.pc = self.stack_pop(mem);
+                // TODO: enable interrupts
                 4
             }
 
