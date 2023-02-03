@@ -234,15 +234,19 @@ mod tests {
         assert_eq!(regs.af(), 0xFFF0);
     }
 
-    fn assert_flags(flags: &Flags, z: bool, n: bool, h: bool, c: bool) {
-        assert_eq!(flags.get(Flag::Zero), z);
-        assert_eq!(flags.get(Flag::Subtraction), n);
-        assert_eq!(flags.get(Flag::HalfCarry), h);
-        assert_eq!(flags.get(Flag::Carry), c);
-    }
-
     #[test]
     fn get_set_flags() {
+        fn assert_flags(flags: &Flags, z: bool, n: bool, h: bool, c: bool) {
+            assert_eq!(flags.get(Flag::Zero), z);
+            assert_eq!(flags.get(Flag::Subtraction), n);
+            assert_eq!(flags.get(Flag::HalfCarry), h);
+            assert_eq!(flags.get(Flag::Carry), c);
+        }
+
+        let mut regs = Registers::default();
+        regs.set_af(0b01010000);
+        assert_flags(&regs.flags, false, true, false, true);
+
         let mut flags = Flags::default();
 
         assert_flags(&flags, false, false, false, false);
@@ -252,9 +256,5 @@ mod tests {
 
         flags.toggle(Flag::Carry).toggle(Flag::HalfCarry);
         assert_flags(&flags, true, false, false, true);
-
-        let mut regs = Registers::default();
-        regs.set_af(0b01010000);
-        assert_flags(&regs.flags, false, true, false, true);
     }
 }
