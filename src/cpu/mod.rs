@@ -500,9 +500,10 @@ impl Cpu {
                 4
             }
 
-            // RST ?
+            // RST n
             0xC7 | 0xCF | 0xD7 | 0xDF | 0xE7 | 0xEF | 0xF7 | 0xFF => {
-                // TODO
+                self.stack_push(mem, self.regs.pc);
+                self.regs.pc = (0xC7 - opcode.0) as u16;
                 4
             }
 
