@@ -389,25 +389,27 @@ impl Cpu {
 
             // RLCA
             0x07 => {
-                // TODO
+                self.regs.a = alu::rotate_left(&mut self.regs.flags, self.regs.a);
                 1
             }
 
             // RLA
             0x17 => {
-                // TODO
+                self.regs.a =
+                    alu::rotate_left_through_carry_flag(&mut self.regs.flags, self.regs.a);
                 1
             }
 
             // RRCA
             0x0F => {
-                // TODO
+                self.regs.a = alu::rotate_right(&mut self.regs.flags, self.regs.a);
                 1
             }
 
             // RRA
             0x1F => {
-                // TODO
+                self.regs.a =
+                    alu::rotate_right_through_carry_flag(&mut self.regs.flags, self.regs.a);
                 1
             }
 

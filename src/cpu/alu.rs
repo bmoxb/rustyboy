@@ -104,3 +104,57 @@ pub fn bitwise_not(flags: &mut Flags, x: u8) -> u8 {
 
     !x
 }
+
+pub fn rotate_left(flags: &mut Flags, x: u8) -> u8 {
+    let carry_bit = x >> 7;
+    let result = (x << 1) | carry_bit;
+
+    flags
+        .set(Flag::Zero, result == 0)
+        .set(Flag::Subtraction, false)
+        .set(Flag::HalfCarry, false)
+        .set(Flag::Carry, carry_bit != 0);
+
+    result
+}
+
+pub fn rotate_left_through_carry_flag(flags: &mut Flags, x: u8) -> u8 {
+    let carry_bit = x >> 7;
+    let result = (x << 1) | (flags.get(Flag::Carry) as u8);
+
+    flags
+        .set(Flag::Zero, result == 0)
+        .set(Flag::Subtraction, false)
+        .set(Flag::HalfCarry, false)
+        .set(Flag::Carry, carry_bit != 0);
+
+    result
+}
+
+pub fn rotate_right(flags: &mut Flags, x: u8) -> u8 {
+    let carry_bit = x & 1;
+    let result = (x >> 1) | (carry_bit << 7);
+
+    flags
+        .set(Flag::Zero, result == 0)
+        .set(Flag::Subtraction, false)
+        .set(Flag::HalfCarry, false)
+        .set(Flag::Carry, carry_bit != 0);
+
+    result
+}
+
+pub fn rotate_right_through_carry_flag(flags: &mut Flags, x: u8) -> u8 {
+    let carry_bit = x & 1;
+    let result = (x >> 1) | ((flags.get(Flag::Carry) as u8) << 7);
+
+    flags
+        .set(Flag::Zero, result == 0)
+        .set(Flag::Subtraction, false)
+        .set(Flag::HalfCarry, false)
+        .set(Flag::Carry, carry_bit != 0);
+
+    result
+}
+
+// TODO: Tidy up flag setting?
