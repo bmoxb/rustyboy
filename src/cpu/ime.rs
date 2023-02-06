@@ -57,7 +57,7 @@ mod tests {
     }
 
     #[test]
-    fn enable_display_after_cycles() {
+    fn enable_disable_after_cycles() {
         let mut ime = InterruptMasterEnable::default();
 
         ime.enable(1);
