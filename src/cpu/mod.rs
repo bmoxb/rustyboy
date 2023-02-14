@@ -174,33 +174,29 @@ impl Cpu {
 
             // LD A, [HL-]
             0x3A => {
-                let hl = self.regs.hl();
-                self.regs.a = mem.read8(hl);
-                self.regs.set_hl(hl - 1);
+                self.regs.a = mem.read8(self.regs.hl());
+                self.regs.set_hl(self.regs.hl() - 1);
                 2
             }
 
             // LD [HL-], A
             0x32 => {
-                let hl = self.regs.hl();
-                mem.write8(hl, self.regs.a);
-                self.regs.set_hl(hl - 1);
+                mem.write8(self.regs.hl(), self.regs.a);
+                self.regs.set_hl(self.regs.hl() - 1);
                 2
             }
 
             // LD A, [HL+]
             0x2A => {
-                let hl = self.regs.hl();
-                self.regs.a = mem.read8(hl);
-                self.regs.set_hl(hl + 1);
+                self.regs.a = mem.read8(self.regs.hl());
+                self.regs.set_hl(self.regs.hl() + 1);
                 2
             }
 
             // LD [HL+], A
             0x22 => {
-                let hl = self.regs.hl();
-                mem.write8(hl, self.regs.a);
-                self.regs.set_hl(hl + 1);
+                mem.write8(self.regs.hl(), self.regs.a);
+                self.regs.set_hl(self.regs.hl() + 1);
                 2
             }
 
@@ -252,115 +248,205 @@ impl Cpu {
 
             // ADD r
             // 0b10000yyy
-            0x80..=0x85 | 0x87 => self.arith_logic_instr_reg(opcode, alu::add8, true),
+            0x80..=0x85 | 0x87 => {
+                let r = self.regs.get8(opcode.yyy());
+                self.regs.a = alu::add8(&mut self.regs.flags, self.regs.a, r);
+                1
+            }
 
             // ADD [HL]
-            0x86 => self.arith_logic_instr_hl(mem, alu::add8, true),
+            0x86 => {
+                let x = mem.read8(self.regs.hl());
+                self.regs.a = alu::add8(&mut self.regs.flags, self.regs.a, x);
+                2
+            }
 
             // ADD n
-            0xC6 => self.arith_logic_instr_immediate(mem, alu::add8, true),
+            0xC6 => {
+                let x = self.fetch8(mem);
+                self.regs.a = alu::add8(&mut self.regs.flags, self.regs.a, x);
+                2
+            }
 
             // ADC r
             // 0b10001yyy
-            0x88..=0x8D | 0x8F => self.arith_logic_instr_reg(opcode, alu::adc8, true),
+            0x88..=0x8D | 0x8F => {
+                let r = self.regs.get8(opcode.yyy());
+                self.regs.a = alu::adc8(&mut self.regs.flags, self.regs.a, r);
+                1
+            }
 
             // ADC [HL]
-            0x8E => self.arith_logic_instr_hl(mem, alu::adc8, true),
+            0x8E => {
+                let x = mem.read8(self.regs.hl());
+                self.regs.a = alu::adc8(&mut self.regs.flags, self.regs.a, x);
+                2
+            }
 
             // ADC n
-            0xCE => self.arith_logic_instr_immediate(mem, alu::adc8, true),
+            0xCE => {
+                let x = self.fetch8(mem);
+                self.regs.a = alu::adc8(&mut self.regs.flags, self.regs.a, x);
+                2
+            }
 
             // SUB r
             // 0b10010yyy
-            0x90..=0x95 | 0x97 => self.arith_logic_instr_reg(opcode, alu::sub8, true),
+            0x90..=0x95 | 0x97 => {
+                let r = self.regs.get8(opcode.yyy());
+                self.regs.a = alu::sub8(&mut self.regs.flags, self.regs.a, r);
+                1
+            }
 
             // SUB [HL]
-            0x96 => self.arith_logic_instr_hl(mem, alu::sub8, true),
+            0x96 => {
+                let x = mem.read8(self.regs.hl());
+                self.regs.a = alu::sub8(&mut self.regs.flags, self.regs.a, x);
+                2
+            }
 
             // SUB n
-            0xD6 => self.arith_logic_instr_immediate(mem, alu::sub8, true),
+            0xD6 => {
+                let x = self.fetch8(mem);
+                self.regs.a = alu::sub8(&mut self.regs.flags, self.regs.a, x);
+                2
+            }
 
             // SBC r
             // 0b10011yyy
-            0x98..=0x9D | 0x9F => self.arith_logic_instr_reg(opcode, alu::sbc8, true),
+            0x98..=0x9D | 0x9F => {
+                let r = self.regs.get8(opcode.yyy());
+                self.regs.a = alu::sbc8(&mut self.regs.flags, self.regs.a, r);
+                1
+            }
 
             // SBC [HL]
-            0x9E => self.arith_logic_instr_hl(mem, alu::sbc8, true),
+            0x9E => {
+                let x = mem.read8(self.regs.hl());
+                self.regs.a = alu::sbc8(&mut self.regs.flags, self.regs.a, x);
+                2
+            }
 
             // SBC n
-            0xDE => self.arith_logic_instr_immediate(mem, alu::sbc8, true),
+            0xDE => {
+                let x = self.fetch8(mem);
+                self.regs.a = alu::sbc8(&mut self.regs.flags, self.regs.a, x);
+                2
+            }
 
             // CP r
             // 0b10111yyy
-            0xB8..=0xBD | 0xBF => self.arith_logic_instr_reg(opcode, alu::sub8, false),
+            0xB8..=0xBD | 0xBF => {
+                let r = self.regs.get8(opcode.yyy());
+                alu::sub8(&mut self.regs.flags, self.regs.a, r);
+                1
+            }
 
             // CP [HL]
-            0xBE => self.arith_logic_instr_hl(mem, alu::sub8, false),
+            0xBE => {
+                let value = mem.read8(self.regs.hl());
+                alu::sub8(&mut self.regs.flags, self.regs.a, value);
+                2
+            }
 
             // CP n
-            0xFE => self.arith_logic_instr_immediate(mem, alu::sub8, false),
+            0xFE => {
+                let value = self.fetch8(mem);
+                alu::sub8(&mut self.regs.flags, self.regs.a, value);
+                2
+            }
 
             // INC r
             // 0b00xxx100
             0x04 | 0x14 | 0x24 | 0x0C | 0x1C | 0x2C | 0x3C => {
-                let r = self.regs.get8(opcode.xxx());
-                let result = alu::inc8(&mut self.regs.flags, r);
-                self.regs.set8(opcode.xxx(), result);
+                self.update_reg(opcode.xxx(), alu::inc8);
                 1
             }
 
             // INC [HL]
             0x34 => {
-                let value = mem.read8(self.regs.hl());
-                mem.write8(self.regs.hl(), alu::inc8(&mut self.regs.flags, value));
+                self.update_mem_hl(mem, alu::inc8);
                 3
             }
 
             // DEC r
             // 0b00xxx101
             0x05 | 0x15 | 0x25 | 0x0D | 0x1D | 0x2D | 0x3D => {
-                let r = self.regs.get8(opcode.xxx());
-                let result = alu::dec8(&mut self.regs.flags, r);
-                self.regs.set8(opcode.xxx(), result);
+                self.update_reg(opcode.xxx(), alu::dec8);
                 1
             }
 
             // DEC [HL]
             0x35 => {
-                let value = mem.read8(self.regs.hl());
-                mem.write8(self.regs.hl(), alu::dec8(&mut self.regs.flags, value));
+                self.update_mem_hl(mem, alu::dec8);
                 3
             }
 
             // AND r
             // 0b10100yyy
-            0xA0..=0xA5 | 0xA7 => self.arith_logic_instr_reg(opcode, alu::bitwise_and, true),
+            0xA0..=0xA5 | 0xA7 => {
+                let r = self.regs.get8(opcode.yyy());
+                self.regs.a = alu::bitwise_and(&mut self.regs.flags, self.regs.a, r);
+                1
+            }
 
             // AND [HL]
-            0xA6 => self.arith_logic_instr_hl(mem, alu::bitwise_and, true),
+            0xA6 => {
+                let x = mem.read8(self.regs.hl());
+                self.regs.a = alu::bitwise_and(&mut self.regs.flags, self.regs.a, x);
+                2
+            }
 
             // AND n
-            0xE6 => self.arith_logic_instr_immediate(mem, alu::bitwise_and, true),
+            0xE6 => {
+                let x = self.fetch8(mem);
+                self.regs.a = alu::bitwise_and(&mut self.regs.flags, self.regs.a, x);
+                2
+            }
 
             // OR r
             // 0b10110yyy
-            0xB0..=0xB5 | 0xB7 => self.arith_logic_instr_reg(opcode, alu::bitwise_or, true),
+            0xB0..=0xB5 | 0xB7 => {
+                let r = self.regs.get8(opcode.yyy());
+                self.regs.a = alu::bitwise_or(&mut self.regs.flags, self.regs.a, r);
+                1
+            }
 
             // OR [HL]
-            0xB6 => self.arith_logic_instr_hl(mem, alu::bitwise_or, true),
+            0xB6 => {
+                let x = mem.read8(self.regs.hl());
+                self.regs.a = alu::bitwise_or(&mut self.regs.flags, self.regs.a, x);
+                2
+            }
 
             // OR n
-            0xF6 => self.arith_logic_instr_immediate(mem, alu::bitwise_or, true),
+            0xF6 => {
+                let x = self.fetch8(mem);
+                self.regs.a = alu::bitwise_or(&mut self.regs.flags, self.regs.a, x);
+                2
+            }
 
             // XOR r
             // 0b10101yyy
-            0xA8..=0xAD | 0xAF => self.arith_logic_instr_reg(opcode, alu::bitwise_xor, true),
+            0xA8..=0xAD | 0xAF => {
+                let r = self.regs.get8(opcode.yyy());
+                self.regs.a = alu::bitwise_xor(&mut self.regs.flags, self.regs.a, r);
+                1
+            }
 
             // XOR [HL]
-            0xAE => self.arith_logic_instr_hl(mem, alu::bitwise_xor, true),
+            0xAE => {
+                let x = mem.read8(self.regs.hl());
+                self.regs.a = alu::bitwise_xor(&mut self.regs.flags, self.regs.a, x);
+                2
+            }
 
             // XOR n
-            0xEE => self.arith_logic_instr_immediate(mem, alu::bitwise_xor, true),
+            0xEE => {
+                let x = self.fetch8(mem);
+                self.regs.a = alu::bitwise_xor(&mut self.regs.flags, self.regs.a, x);
+                2
+            }
 
             // DAA
             0x27 => {
@@ -571,7 +657,7 @@ impl Cpu {
                         "STOP instruction not followed by null byte - instead encountered {:#04X}",
                         n
                     );
-                    self.regs.pc -= 1;
+                    self.regs.pc -= 1; // go back so that the fetched byte does get executed
                 }
                 self.state = State::Stopped;
                 1
@@ -610,32 +696,26 @@ impl Cpu {
             // RLC r
             // 0b00000yyy
             0x00..=0x05 | 0x07 => {
-                let r = self.regs.get8(opcode.yyy());
-                let result = alu::rotate_left(&mut self.regs.flags, r);
-                self.regs.set8(opcode.yyy(), result);
+                self.update_reg(opcode.yyy(), alu::rotate_left);
                 2
             }
 
             // RLC [HL]
             0x06 => {
-                let hl = self.regs.hl();
-                let result = alu::rotate_left(&mut self.regs.flags, mem.read8(hl));
-                mem.write8(hl, result);
+                self.update_mem_hl(mem, alu::rotate_left);
                 4
             }
 
             // RL r
             // 0b00010yyy
             0x10..=0x15 | 0x17 => {
-                let r = self.regs.get8(opcode.yyy());
-                let result = alu::rotate_left_through_carry_flag(&mut self.regs.flags, r);
-                self.regs.set8(opcode.yyy(), result);
+                self.update_reg(opcode.yyy(), alu::rotate_left_through_carry_flag);
                 2
             }
 
             // RL [HL]
             0x16 => {
-                // TODO
+                self.update_mem_hl(mem, alu::rotate_left_through_carry_flag);
                 4
             }
 
@@ -655,13 +735,13 @@ impl Cpu {
             // RR r
             // 0b00011yyy
             0x18..=0x1D | 0x1F => {
-                // TODO
+                self.update_reg(opcode.yyy(), alu::rotate_right_through_carry_flag);
                 2
             }
 
             // RR [HL]
             0x1E => {
-                // TODO
+                self.update_mem_hl(mem, alu::rotate_right_through_carry_flag);
                 4
             }
 
@@ -681,13 +761,13 @@ impl Cpu {
             // SWAP r
             // 0b00110yyy
             0x30..=0x35 | 0x37 => {
-                // TODO
+                self.update_reg(opcode.yyy(), alu::swap_nibbles);
                 2
             }
 
             // SWAP [HL]
             0x36 => {
-                // TODO
+                self.update_mem_hl(mem, alu::swap_nibbles);
                 4
             }
 
@@ -820,48 +900,6 @@ impl Cpu {
         value
     }
 
-    fn arith_logic_instr_reg(
-        &mut self,
-        opcode: Opcode,
-        alu_func: impl Fn(&mut Flags, u8, u8) -> u8,
-        store_result: bool,
-    ) -> usize {
-        let r = self.regs.get8(opcode.yyy());
-        let result = alu_func(&mut self.regs.flags, self.regs.a, r);
-        if store_result {
-            self.regs.a = result;
-        }
-        1
-    }
-
-    fn arith_logic_instr_hl(
-        &mut self,
-        mem: &Memory,
-        alu_func: impl Fn(&mut Flags, u8, u8) -> u8,
-        store_result: bool,
-    ) -> usize {
-        let value = mem.read8(self.regs.hl());
-        let result = alu_func(&mut self.regs.flags, self.regs.a, value);
-        if store_result {
-            self.regs.a = result;
-        }
-        2
-    }
-
-    fn arith_logic_instr_immediate(
-        &mut self,
-        mem: &Memory,
-        alu_func: impl Fn(&mut Flags, u8, u8) -> u8,
-        store_result: bool,
-    ) -> usize {
-        let n = self.fetch8(mem);
-        let result = alu_func(&mut self.regs.flags, self.regs.a, n);
-        if store_result {
-            self.regs.a = result;
-        }
-        2
-    }
-
     fn evaluate_flag_condition(&self, ff: u8) -> bool {
         match ff {
             0 => !self.regs.flags.get(Flag::Zero),
@@ -869,6 +907,18 @@ impl Cpu {
             2 => self.regs.flags.get(Flag::Carry),
             _ => panic!("{ff} is an unknown flag condition"),
         }
+    }
+
+    fn update_reg(&mut self, reg_index: u8, f: impl Fn(&mut Flags, u8) -> u8) {
+        let x = self.regs.get8(reg_index);
+        let result = f(&mut self.regs.flags, x);
+        self.regs.set8(reg_index, result);
+    }
+
+    fn update_mem_hl(&mut self, mem: &mut Memory, f: impl Fn(&mut Flags, u8) -> u8) {
+        let x = mem.read8(self.regs.hl());
+        let result = f(&mut self.regs.flags, x);
+        mem.write8(self.regs.hl(), result);
     }
 }
 
