@@ -9,15 +9,6 @@ use ime::InterruptMasterEnable;
 use opcode::Opcode;
 use registers::{Flag, Flags, Registers};
 
-// TODO: Reduce code repetition in instruction match branches (e.g., like arithmetic and logic instructions).
-
-// General categories of instruction:
-// - No arguments - just does something (e.g., EI, DI).
-//   - These functions can just be implemented in the match block.
-// - Perform an operation on a single register (e.g., INC n).
-// - Perform an operation on a single value in memory at the address HL (e.g., INC [hl]).
-// TODO
-
 pub struct Cpu {
     regs: Registers,
     state: State,
@@ -722,13 +713,13 @@ impl Cpu {
             // RRC r
             // 0b00001yyy
             0x08..=0x0D | 0x0F => {
-                // TODO
+                self.update_reg(opcode.yyy(), alu::rotate_right);
                 2
             }
 
             // RRC [HL]
             0x0E => {
-                // TODO
+                self.update_mem_hl(mem, alu::rotate_right);
                 4
             }
 
@@ -748,13 +739,13 @@ impl Cpu {
             // SLA r
             // 0b00100yyy
             0x20..=0x25 | 0x27 => {
-                // TODO
+                self.update_reg(opcode.yyy(), alu::shift_left);
                 2
             }
 
             // SLA [HL]
             0x26 => {
-                // TODO
+                self.update_mem_hl(mem, alu::shift_left);
                 4
             }
 
@@ -774,26 +765,26 @@ impl Cpu {
             // SRA r
             // 0b00101yyy
             0x28..=0x2D | 0x2F => {
-                // TODO
+                self.update_reg(opcode.yyy(), alu::shift_right_leave_msb);
                 2
             }
 
             // SRA [HL]
             0x2E => {
-                // TODO
+                self.update_mem_hl(mem, alu::shift_right_leave_msb);
                 4
             }
 
             // SRL r
             // 0b00111yyy
             0x38..=0x3D | 0x3F => {
-                // TODO
+                self.update_reg(opcode.yyy(), alu::shift_right_clear_msb);
                 2
             }
 
             // SRL [HL]
             0x3E => {
-                // TODO
+                self.update_mem_hl(mem, alu::shift_right_clear_msb);
                 4
             }
 
