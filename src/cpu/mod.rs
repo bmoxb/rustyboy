@@ -9,6 +9,8 @@ use ime::InterruptMasterEnable;
 use opcode::Opcode;
 use registers::{Flag, Flags, Registers};
 
+// TODO: Reduce code repetition in instruction match branches (e.g., like arithmetic and logic instructions).
+
 pub struct Cpu {
     regs: Registers,
     state: State,
@@ -570,7 +572,7 @@ impl Cpu {
             0xCB => {
                 let suffix = Opcode(self.fetch8(mem));
                 log::trace!("following the 0xCB prefix is {}", suffix);
-                self.execute_cb(suffix)
+                self.execute_cb(suffix, mem)
             }
 
             0xD3 | 0xDB | 0xDD | 0xE3 | 0xE4 | 0xEB | 0xEC | 0xED | 0xF4 | 0xFC | 0xFD => {
@@ -580,27 +582,33 @@ impl Cpu {
         }
     }
 
-    fn execute_cb(&mut self, opcode: Opcode) -> usize {
+    fn execute_cb(&mut self, opcode: Opcode, mem: &mut Memory) -> usize {
         match opcode.0 {
             // --- ROTATE AND SHIFT INSTRUCTIONS ---
 
             // RLC r
             // 0b00000yyy
             0x00..=0x05 | 0x07 => {
-                // TODO
+                let r = self.regs.get8(opcode.yyy());
+                let result = alu::rotate_left(&mut self.regs.flags, r);
+                self.regs.set8(opcode.yyy(), result);
                 2
             }
 
             // RLC [HL]
             0x06 => {
-                // TODO
+                let hl = self.regs.hl();
+                let result = alu::rotate_left(&mut self.regs.flags, mem.read8(hl));
+                mem.write8(hl, result);
                 4
             }
 
             // RL r
             // 0b00010yyy
             0x10..=0x15 | 0x17 => {
-                // TODO
+                let r = self.regs.get8(opcode.yyy());
+                let result = alu::rotate_left_through_carry_flag(&mut self.regs.flags, r);
+                self.regs.set8(opcode.yyy(), result);
                 2
             }
 
@@ -701,14 +709,16 @@ impl Cpu {
             | 0x6F..=0x75
             | 0x77..=0x7D
             | 0x7F => {
-                // TODO
+                let r = self.regs.get8(opcode.yyy());
+                alu::test_bit(&mut self.regs.flags, opcode.xxx(), r);
                 2
             }
 
             // BIT n, [HL]
             // 0b01xxx110
             0x46 | 0x4E | 0x56 | 0x5E | 0x66 | 0x6E | 0x76 | 0x7E => {
-                // TODO
+                let value = mem.read8(self.regs.hl());
+                alu::test_bit(&mut self.regs.flags, opcode.xxx(), value);
                 3
             }
 
@@ -723,17 +733,18 @@ impl Cpu {
             | 0xEF..=0xF5
             | 0xF7..=0xFD
             | 0xFF => {
-                let _n = opcode.xxx();
-                let _r = opcode.yyy();
-                // TODO
+                let r = self.regs.get8(opcode.yyy());
+                let result = alu::set_bit(opcode.xxx(), r);
+                self.regs.set8(opcode.yyy(), result);
                 2
             }
 
             // SET n, [HL]
             // 0b11xxx110
             0xC6 | 0xCE | 0xD6 | 0xDE | 0xE6 | 0xEE | 0xF6 | 0xFE => {
-                let _n = opcode.xxx();
-                // TODO
+                let value = mem.read8(self.regs.hl());
+                let result = alu::set_bit(opcode.xxx(), value);
+                mem.write8(self.regs.hl(), result);
                 4
             }
 
@@ -748,14 +759,18 @@ impl Cpu {
             | 0xAF..=0xB5
             | 0xB7..=0xBD
             | 0xBF => {
-                // TODO
+                let r = self.regs.get8(opcode.yyy());
+                let result = alu::reset_bit(opcode.xxx(), r);
+                self.regs.set8(opcode.yyy(), result);
                 2
             }
 
             // RES n, [HL]
             // 0b10xxx110
             0x86 | 0x8E | 0x96 | 0x9E | 0xA6 | 0xAE | 0xB6 | 0xBE => {
-                // TODO
+                let value = mem.read8(self.regs.hl());
+                let result = alu::reset_bit(opcode.xxx(), value);
+                mem.write8(self.regs.hl(), result);
                 4
             }
         }

@@ -1,4 +1,9 @@
+#[cfg(test)]
+mod tests;
+
 use super::{Flag, Flags};
+
+// TODO: INC and DEC instructions do not affect flags, therefore need separate ALU functions.
 
 pub fn add8(flags: &mut Flags, x: u8, y: u8) -> u8 {
     let (result, carry) = x.overflowing_add(y);
@@ -11,6 +16,10 @@ pub fn add8(flags: &mut Flags, x: u8, y: u8) -> u8 {
 
     result
 }
+
+// TODO: Specifically in the case of the instruction `ADD SP, n`, the half carry flag is set based on carry occurring
+// at bit 3 instead of bit 11 - this is something that needs to be handled.
+// Source: https://stackoverflow.com/questions/57958631/game-boy-half-carry-flag-and-16-bit-instructions-especially-opcode-0xe8
 
 pub fn add16(flags: &mut Flags, x: u16, y: u16) -> u16 {
     let (result, carry) = x.overflowing_add(y);
@@ -63,37 +72,19 @@ pub fn sbc8(flags: &mut Flags, x: u8, y: u8) -> u8 {
 
 pub fn bitwise_and(flags: &mut Flags, x: u8, y: u8) -> u8 {
     let result = x & y;
-
-    flags
-        .set(Flag::Zero, result == 0)
-        .set(Flag::Subtraction, false)
-        .set(Flag::HalfCarry, true)
-        .set(Flag::Carry, false);
-
+    set_bitwise_flags(flags, result, true);
     result
 }
 
 pub fn bitwise_or(flags: &mut Flags, x: u8, y: u8) -> u8 {
     let result = x | y;
-
-    flags
-        .set(Flag::Zero, result == 0)
-        .set(Flag::Subtraction, false)
-        .set(Flag::HalfCarry, false)
-        .set(Flag::Carry, false);
-
+    set_bitwise_flags(flags, result, false);
     result
 }
 
 pub fn bitwise_xor(flags: &mut Flags, x: u8, y: u8) -> u8 {
     let result = x ^ y;
-
-    flags
-        .set(Flag::Zero, result == 0)
-        .set(Flag::Subtraction, false)
-        .set(Flag::HalfCarry, false)
-        .set(Flag::Carry, false);
-
+    set_bitwise_flags(flags, result, false);
     result
 }
 
@@ -101,7 +92,6 @@ pub fn bitwise_not(flags: &mut Flags, x: u8) -> u8 {
     flags
         .set(Flag::Subtraction, true)
         .set(Flag::HalfCarry, true);
-
     !x
 }
 
@@ -133,17 +123,6 @@ pub fn rotate_right_through_carry_flag(flags: &mut Flags, x: u8) -> u8 {
     result
 }
 
-#[inline]
-fn set_rotation_flags(flags: &mut Flags, result: u8, carry_bit: u8) {
-    flags
-        .set(Flag::Zero, result == 0)
-        .set(Flag::Subtraction, false)
-        .set(Flag::HalfCarry, false)
-        .set(Flag::Carry, carry_bit != 0);
-}
-
-// TODO: Tidy up flag setting?
-
 pub fn test_bit(flags: &mut Flags, bit: u8, value: u8) {
     let mask = 1 << bit;
     let bit_set = (value & mask) != 0;
@@ -165,76 +144,26 @@ pub fn reset_bit(bit: u8, value: u8) -> u8 {
 }
 
 pub fn swap_nibbles(flags: &mut Flags, value: u8) -> u8 {
-    flags
-        .set(Flag::Zero, value == 0)
-        .set(Flag::Subtraction, false)
-        .set(Flag::HalfCarry, false)
-        .set(Flag::Carry, false);
-
+    set_bitwise_flags(flags, value, false);
     let upper = value >> 4;
     let lower = value & 0b1111;
     (lower << 4) + upper
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+#[inline]
+fn set_rotation_flags(flags: &mut Flags, result: u8, carry_bit: u8) {
+    flags
+        .set(Flag::Zero, result == 0)
+        .set(Flag::Subtraction, false)
+        .set(Flag::HalfCarry, false)
+        .set(Flag::Carry, carry_bit != 0);
+}
 
-    #[test]
-    fn bit_testing() {
-        let tests = vec![
-            (0, 0, true),
-            (0, 0xFF, false),
-            (3, 0b1110111, true),
-            (7, 0b10001000, false),
-        ];
-
-        let mut flags = Flags::default();
-
-        for (bit, value, expected) in tests {
-            test_bit(&mut flags, bit, value);
-
-            assert_eq!(
-                expected,
-                flags.get(Flag::Zero),
-                "bit {bit} of value {value} tested, expected {expected} zero flag"
-            );
-            assert!(!flags.get(Flag::Subtraction));
-            assert!(!flags.get(Flag::HalfCarry));
-        }
-    }
-
-    #[test]
-    fn bit_setting() {
-        assert_eq!(set_bit(0, 0), 1);
-        assert_eq!(set_bit(0, 1), 1);
-        assert_eq!(set_bit(2, 0b10011), 0b10111);
-        assert_eq!(set_bit(7, 0b01111111), 0xFF);
-    }
-
-    #[test]
-    fn bit_resetting() {
-        assert_eq!(reset_bit(0, 0), 0);
-        assert_eq!(reset_bit(0, 1), 0);
-        assert_eq!(reset_bit(3, 0b1010), 0b10);
-        assert_eq!(reset_bit(7, 0b10000000), 0);
-    }
-
-    #[test]
-    fn nibble_swapping() {
-        let mut flags = Flags::default();
-        flags
-            .set(Flag::Subtraction, true)
-            .set(Flag::HalfCarry, true)
-            .set(Flag::Carry, true);
-
-        assert_eq!(swap_nibbles(&mut flags, 0xAB), 0xBA);
-        assert!(!flags.get(Flag::Zero));
-        assert!(!flags.get(Flag::Subtraction));
-        assert!(!flags.get(Flag::HalfCarry));
-        assert!(!flags.get(Flag::Carry));
-
-        assert_eq!(swap_nibbles(&mut flags, 0), 0);
-        assert!(flags.get(Flag::Zero));
-    }
+#[inline]
+fn set_bitwise_flags(flags: &mut Flags, result: u8, half_carry: bool) {
+    flags
+        .set(Flag::Zero, result == 0)
+        .set(Flag::Subtraction, false)
+        .set(Flag::HalfCarry, half_carry)
+        .set(Flag::Carry, false);
 }

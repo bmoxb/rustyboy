@@ -146,7 +146,7 @@ impl fmt::Display for Registers {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug, PartialEq)]
 pub struct Flags(u8);
 
 impl Flags {
