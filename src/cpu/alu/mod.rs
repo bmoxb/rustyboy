@@ -3,16 +3,68 @@ mod tests;
 
 use super::{Flag, Flags};
 
-// TODO: INC and DEC instructions do not affect flags, therefore need separate ALU functions.
+// 8-bit increase - affects zero, subtraction, and half carry flags.
+pub fn inc8(flags: &mut Flags, x: u8) -> u8 {
+    let result = x.wrapping_add(1);
+    set_zero_subtraction_half_carry_add(flags, result, x, 1, 0);
+    result
+}
 
+// 16-bit increase - affects no flags.
+pub fn inc16(x: u16) -> u16 {
+    x.wrapping_add(1)
+}
+
+// 8-bit decrease - affects zero, subtraction, an half carry flags.
+pub fn dec8(flags: &mut Flags, x: u8) -> u8 {
+    let result = x.wrapping_sub(1);
+    set_zero_subtraction_half_carry_sub(flags, result, x, 1, 0);
+    result
+}
+
+// 16-bit decrease - affects no flags.
+pub fn dec16(x: u16) -> u16 {
+    x.wrapping_sub(1)
+}
+
+// 8-bit addition - affects all flags.
 pub fn add8(flags: &mut Flags, x: u8, y: u8) -> u8 {
     let (result, carry) = x.overflowing_add(y);
 
-    flags
-        .set(Flag::Zero, result == 0)
-        .set(Flag::Subtraction, false)
-        .set(Flag::HalfCarry, (x & 0x0F) + (y & 0x0F) > 0x0F)
-        .set(Flag::Carry, carry);
+    set_zero_subtraction_half_carry_add(flags, result, x, y, 0);
+    flags.set(Flag::Carry, carry);
+
+    result
+}
+
+// 8-bit addition with carry - affects all flags.
+pub fn adc8(flags: &mut Flags, x: u8, y: u8) -> u8 {
+    let c = flags.get(Flag::Carry) as u8;
+    let result = x.wrapping_add(y).wrapping_add(c);
+
+    set_zero_subtraction_half_carry_add(flags, result, x, y, c);
+    flags.set(Flag::Carry, (x as u16) + (y as u16) + (c as u16) > 0xFF);
+
+    result
+}
+
+// 8-bit subtraction - affects all flags.
+pub fn sub8(flags: &mut Flags, x: u8, y: u8) -> u8 {
+    let (result, carry) = x.overflowing_sub(y);
+
+    set_zero_subtraction_half_carry_sub(flags, result, x, y, 0);
+    flags.set(Flag::Carry, carry);
+
+    result
+}
+
+// 8-bit subtraction with carry - affects all flags.
+pub fn sbc8(flags: &mut Flags, x: u8, y: u8) -> u8 {
+    let c = flags.get(Flag::Carry) as u8;
+    let result = x.wrapping_sub(y).wrapping_sub(c);
+
+    set_zero_subtraction_half_carry_sub(flags, result, x, y, c);
+    flags.set(Flag::Carry, (x as u16) < (y as u16) + (c as u16));
 
     result
 }
@@ -21,6 +73,7 @@ pub fn add8(flags: &mut Flags, x: u8, y: u8) -> u8 {
 // at bit 3 instead of bit 11 - this is something that needs to be handled.
 // Source: https://stackoverflow.com/questions/57958631/game-boy-half-carry-flag-and-16-bit-instructions-especially-opcode-0xe8
 
+// 16-bit addition - affects subtraction, half carry, and carry flags.
 pub fn add16(flags: &mut Flags, x: u16, y: u16) -> u16 {
     let (result, carry) = x.overflowing_add(y);
 
@@ -28,44 +81,6 @@ pub fn add16(flags: &mut Flags, x: u16, y: u16) -> u16 {
         .set(Flag::Subtraction, false)
         .set(Flag::HalfCarry, (x & 0x7FF) + (x & 0x7FF) > 0x7FF) // carry from bit 11
         .set(Flag::Carry, carry);
-
-    result
-}
-
-pub fn adc8(flags: &mut Flags, x: u8, y: u8) -> u8 {
-    let c = flags.get(Flag::Carry) as u8;
-    let result = x.wrapping_add(y).wrapping_add(c);
-
-    flags
-        .set(Flag::Zero, result == 0)
-        .set(Flag::Subtraction, false)
-        .set(Flag::HalfCarry, (x & 0xF) + (y & 0xF) + c > 0xF)
-        .set(Flag::Carry, (x as u16) + (y as u16) + (c as u16) > 0xFF);
-
-    result
-}
-
-pub fn sub8(flags: &mut Flags, x: u8, y: u8) -> u8 {
-    let (result, carry) = x.overflowing_sub(y);
-
-    flags
-        .set(Flag::Zero, result == 0)
-        .set(Flag::Subtraction, true)
-        .set(Flag::HalfCarry, (x & 0xF) < (y & 0xF))
-        .set(Flag::Carry, carry);
-
-    result
-}
-
-pub fn sbc8(flags: &mut Flags, x: u8, y: u8) -> u8 {
-    let c = flags.get(Flag::Carry) as u8;
-    let result = x.wrapping_sub(y).wrapping_sub(c);
-
-    flags
-        .set(Flag::Zero, result == 0)
-        .set(Flag::Subtraction, true)
-        .set(Flag::HalfCarry, (x & 0xF) < (y & 0xF) + c)
-        .set(Flag::Carry, (x as u16) < (y as u16) + (c as u16));
 
     result
 }
@@ -166,4 +181,20 @@ fn set_bitwise_flags(flags: &mut Flags, result: u8, half_carry: bool) {
         .set(Flag::Subtraction, false)
         .set(Flag::HalfCarry, half_carry)
         .set(Flag::Carry, false);
+}
+
+#[inline]
+fn set_zero_subtraction_half_carry_add(flags: &mut Flags, result: u8, x: u8, y: u8, c: u8) {
+    flags
+        .set(Flag::Zero, result == 0)
+        .set(Flag::Subtraction, false)
+        .set(Flag::HalfCarry, (x & 0xF) + (y & 0xF) + c > 0xF);
+}
+
+#[inline]
+fn set_zero_subtraction_half_carry_sub(flags: &mut Flags, result: u8, x: u8, y: u8, c: u8) {
+    flags
+        .set(Flag::Zero, result == 0)
+        .set(Flag::Subtraction, true)
+        .set(Flag::HalfCarry, (x & 0xF) < (y & 0xF) + c);
 }

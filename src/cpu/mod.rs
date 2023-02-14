@@ -11,6 +11,13 @@ use registers::{Flag, Flags, Registers};
 
 // TODO: Reduce code repetition in instruction match branches (e.g., like arithmetic and logic instructions).
 
+// General categories of instruction:
+// - No arguments - just does something (e.g., EI, DI).
+//   - These functions can just be implemented in the match block.
+// - Perform an operation on a single register (e.g., INC n).
+// - Perform an operation on a single value in memory at the address HL (e.g., INC [hl]).
+// TODO
+
 pub struct Cpu {
     regs: Registers,
     state: State,
@@ -296,20 +303,34 @@ impl Cpu {
             // INC r
             // 0b00xxx100
             0x04 | 0x14 | 0x24 | 0x0C | 0x1C | 0x2C | 0x3C => {
-                self.inc_dec_instr_reg(opcode, alu::add8)
+                let r = self.regs.get8(opcode.xxx());
+                let result = alu::inc8(&mut self.regs.flags, r);
+                self.regs.set8(opcode.xxx(), result);
+                1
             }
 
             // INC [HL]
-            0x34 => self.inc_dec_instr_hl(mem, alu::add8),
+            0x34 => {
+                let value = mem.read8(self.regs.hl());
+                mem.write8(self.regs.hl(), alu::inc8(&mut self.regs.flags, value));
+                3
+            }
 
             // DEC r
             // 0b00xxx101
             0x05 | 0x15 | 0x25 | 0x0D | 0x1D | 0x2D | 0x3D => {
-                self.inc_dec_instr_reg(opcode, alu::sub8)
+                let r = self.regs.get8(opcode.xxx());
+                let result = alu::dec8(&mut self.regs.flags, r);
+                self.regs.set8(opcode.xxx(), result);
+                1
             }
 
             // DEC [HL]
-            0x35 => self.inc_dec_instr_hl(mem, alu::sub8),
+            0x35 => {
+                let value = mem.read8(self.regs.hl());
+                mem.write8(self.regs.hl(), alu::dec8(&mut self.regs.flags, value));
+                3
+            }
 
             // AND r
             // 0b10100yyy
@@ -368,14 +389,14 @@ impl Cpu {
             // INC rr
             0x03 | 0x13 | 0x23 | 0x33 => {
                 let rr = self.regs.get16_with_sp(opcode.rr());
-                self.regs.set16_with_sp(opcode.rr(), rr.wrapping_add(1));
+                self.regs.set16_with_sp(opcode.rr(), alu::inc16(rr));
                 2
             }
 
             // DEC rr
             0x0B | 0x1B | 0x2B | 0x3B => {
                 let rr = self.regs.get16_with_sp(opcode.rr());
-                self.regs.set16_with_sp(opcode.rr(), rr.wrapping_sub(1));
+                self.regs.set16_with_sp(opcode.rr(), alu::dec16(rr));
                 2
             }
 
@@ -839,27 +860,6 @@ impl Cpu {
             self.regs.a = result;
         }
         2
-    }
-
-    fn inc_dec_instr_reg(
-        &mut self,
-        opcode: Opcode,
-        alu_func: impl Fn(&mut Flags, u8, u8) -> u8,
-    ) -> usize {
-        let r = self.regs.get8(opcode.xxx());
-        let result = alu_func(&mut self.regs.flags, r, 1);
-        self.regs.set8(opcode.xxx(), result);
-        1
-    }
-
-    fn inc_dec_instr_hl(
-        &mut self,
-        mem: &mut Memory,
-        alu_func: impl Fn(&mut Flags, u8, u8) -> u8,
-    ) -> usize {
-        let value = mem.read8(self.regs.hl());
-        mem.write8(self.regs.hl(), alu_func(&mut self.regs.flags, value, 1));
-        3
     }
 
     fn evaluate_flag_condition(&self, ff: u8) -> bool {
