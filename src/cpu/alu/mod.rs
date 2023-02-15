@@ -198,6 +198,32 @@ pub fn swap_nibbles(flags: &mut Flags, value: u8) -> u8 {
     (lower << 4) + upper
 }
 
+pub fn daa(flags: &mut Flags, mut value: u8) -> u8 {
+    // This implementation is based on https://ehaskins.com/2018-01-30%20Z80%20DAA/ so thank you to the author of that
+    // post!
+
+    let mut correction = 0;
+
+    if flags.get(Flag::HalfCarry) || (!flags.get(Flag::Subtraction) && (value & 0xF) > 9) {
+        correction |= 0x6;
+    }
+
+    if flags.get(Flag::Carry) || (!flags.get(Flag::Subtraction) && value > 0x99) {
+        correction |= 0x60;
+        flags.set(Flag::Carry, true);
+    }
+
+    if flags.get(Flag::Subtraction) {
+        value -= correction;
+    } else {
+        value += correction;
+    }
+
+    flags.set(Flag::Zero, value == 0);
+
+    value
+}
+
 #[inline]
 fn set_rotation_flags(flags: &mut Flags, result: u8, carry_bit: u8) {
     flags
