@@ -125,7 +125,10 @@ pub fn rotate_left_through_carry_flag(flags: &mut Flags, x: u8) -> u8 {
 }
 
 pub fn shift_left(flags: &mut Flags, x: u8) -> u8 {
-    unimplemented!() // TODO
+    let carry_bit = x >> 7;
+    let result = x << 1;
+    set_rotation_flags(flags, result, carry_bit);
+    result
 }
 
 pub fn rotate_right(flags: &mut Flags, x: u8) -> u8 {
@@ -143,11 +146,17 @@ pub fn rotate_right_through_carry_flag(flags: &mut Flags, x: u8) -> u8 {
 }
 
 pub fn shift_right_leave_msb(flags: &mut Flags, x: u8) -> u8 {
-    unimplemented!()
+    let carry_bit = x & 1;
+    let result = (x >> 1) + (x & 0x80);
+    set_rotation_flags(flags, result, carry_bit);
+    result
 }
 
 pub fn shift_right_clear_msb(flags: &mut Flags, x: u8) -> u8 {
-    unimplemented!()
+    let carry_bit = x & 1;
+    let result = x >> 1;
+    set_rotation_flags(flags, result, carry_bit);
+    result
 }
 
 pub fn test_bit(flags: &mut Flags, bit: u8, value: u8) {
