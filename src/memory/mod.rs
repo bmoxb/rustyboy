@@ -1,11 +1,21 @@
 // TODO: Proper memory implementation!
 pub struct Memory {
     mem: [u8; 0x10000],
+    logged_char: Option<char>,
 }
 
 impl Memory {
     pub fn new() -> Self {
-        Memory { mem: [0; 0x10000] }
+        Memory {
+            mem: [0; 0x10000],
+            logged_char: None,
+        }
+    }
+
+    pub fn load(&mut self, rom: &[u8]) {
+        for (addr, byte) in rom.iter().enumerate() {
+            self.mem[addr] = *byte;
+        }
     }
 
     pub fn read8(&self, addr: u16) -> u8 {
@@ -20,6 +30,10 @@ impl Memory {
             self.read8(addr)
         );
         self.mem[addr as usize] = value;
+
+        if addr == 0xFF02 && value == 0x81 {
+            self.logged_char = Some(self.read8(0xFF01) as char);
+        }
     }
 
     pub fn read16(&self, addr: u16) -> u16 {
@@ -37,5 +51,10 @@ impl Memory {
         );
         self.mem[addr as usize] = (value & 0xFF) as u8; // little endian so LSB first
         self.mem[addr as usize + 1] = (value >> 8) as u8;
+    }
+
+    #[allow(unused)]
+    pub fn take_logged_char(&mut self) -> Option<char> {
+        self.logged_char.take()
     }
 }
