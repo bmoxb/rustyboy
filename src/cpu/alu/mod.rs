@@ -69,10 +69,6 @@ pub fn sbc8(flags: &mut Flags, x: u8, y: u8) -> u8 {
     result
 }
 
-// TODO: Specifically in the case of the instruction `ADD SP, n`, the half carry flag is set based on carry occurring
-// at bit 3 instead of bit 11 - this is something that needs to be handled.
-// Source: https://stackoverflow.com/questions/57958631/game-boy-half-carry-flag-and-16-bit-instructions-especially-opcode-0xe8
-
 // 16-bit addition - affects subtraction, half carry, and carry flags.
 pub fn add16(flags: &mut Flags, x: u16, y: u16) -> u16 {
     let (result, carry) = x.overflowing_add(y);
@@ -80,6 +76,20 @@ pub fn add16(flags: &mut Flags, x: u16, y: u16) -> u16 {
     flags
         .set(Flag::Subtraction, false)
         .set(Flag::HalfCarry, (x & 0x7FF) + (x & 0x7FF) > 0x7FF) // carry from bit 11
+        .set(Flag::Carry, carry);
+
+    result
+}
+
+// 16-bit addition except half-carry occurs at bit 3 and the zero flag is set - affects all flags.
+// https://stackoverflow.com/questions/57958631/game-boy-half-carry-flag-and-16-bit-instructions-especially-opcode-0xe8
+pub fn add16_variant(flags: &mut Flags, x: u16, y: u16) -> u16 {
+    let (result, carry) = x.overflowing_add(y);
+
+    flags
+        .set(Flag::Zero, false)
+        .set(Flag::Subtraction, false)
+        .set(Flag::HalfCarry, (x & 0xF) + (y & 0xF) > 0xF)
         .set(Flag::Carry, carry);
 
     result

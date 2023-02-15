@@ -480,8 +480,7 @@ impl Cpu {
             // ADD SP, n
             0xE8 => {
                 let n = self.fetch8(mem); // TODO: sign
-                self.regs.sp = alu::add16(&mut self.regs.flags, self.regs.sp, n as u16);
-                self.regs.flags.set(Flag::Zero, false); // `ADD SP, nn` needs setting zero flag but `ADD HL, rr` doesn't
+                self.regs.sp = alu::add16_variant(&mut self.regs.flags, self.regs.sp, n as u16);
                 4
             }
 
