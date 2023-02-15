@@ -20,7 +20,7 @@ impl Opcode {
     }
 
     pub fn ff(&self) -> u8 {
-        (self.0 >> 3) & 0x11
+        (self.0 >> 3) & 0b11
     }
 }
 

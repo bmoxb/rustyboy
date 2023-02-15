@@ -214,9 +214,9 @@ pub fn daa(flags: &mut Flags, mut value: u8) -> u8 {
     }
 
     if flags.get(Flag::Subtraction) {
-        value -= correction;
+        value = value.wrapping_sub(correction);
     } else {
-        value += correction;
+        value = value.wrapping_add(correction);
     }
 
     flags.set(Flag::Zero, value == 0);

@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 mod alu;
 mod ime;
 mod opcode;
@@ -18,7 +21,11 @@ pub struct Cpu {
 impl Cpu {
     pub fn new() -> Self {
         Cpu {
-            regs: Registers::default(),
+            regs: Registers {
+                sp: 0xFFFE,
+                pc: 0x100,
+                ..Default::default()
+            },
             state: State::Running,
             ime: InterruptMasterEnable::default(),
         }
@@ -443,7 +450,7 @@ impl Cpu {
 
             // DAA
             0x27 => {
-                // TODO
+                self.regs.a = alu::daa(&mut self.regs.flags, self.regs.a);
                 1
             }
 
@@ -606,8 +613,9 @@ impl Cpu {
 
             // RST n
             0xC7 | 0xCF | 0xD7 | 0xDF | 0xE7 | 0xEF | 0xF7 | 0xFF => {
+                let n = opcode.0 - 0xC7;
                 self.stack_push(mem, self.regs.pc);
-                self.regs.pc = (0xC7 - opcode.0) as u16;
+                self.regs.pc = n as u16;
                 4
             }
 
@@ -897,7 +905,8 @@ impl Cpu {
         match ff {
             0 => !self.regs.flags.get(Flag::Zero),
             1 => !self.regs.flags.get(Flag::Zero),
-            2 => self.regs.flags.get(Flag::Carry),
+            2 => self.regs.flags.get(Flag::Zero),
+            3 => self.regs.flags.get(Flag::Carry),
             _ => panic!("{ff} is an unknown flag condition"),
         }
     }
