@@ -1,6 +1,8 @@
 use super::*;
 use crate::memory::Memory;
 
+const CYCLES_WITHOUT_LOG_THRESHOLD: usize = 10_000_000;
+
 macro_rules! test_rom {
     ($name:ident, $file:literal) => {
         #[test]
@@ -19,26 +21,28 @@ macro_rules! test_rom {
             mem.load(rom);
 
             let mut logged = String::new();
+            let mut cycles_since_last_log = 0;
 
-            loop {
+            // continue executing instructions until enough cycles have passed without any output being produced
+            while cycles_since_last_log < CYCLES_WITHOUT_LOG_THRESHOLD {
                 cpu.cycle(&mut mem);
+
+                cycles_since_last_log += 1;
 
                 if let Some(c) = mem.take_logged_char() {
                     logged.push(c);
-                }
-
-                assert!(
-                    !logged.contains("Failed"),
-                    "{} failed - \"{}\"",
-                    stringify!($name),
-                    logged.trim()
-                );
-
-                if logged.contains("Done") {
-                    log::info!("{} - \"{}\"", stringify!($name), logged.trim());
-                    break;
+                    cycles_since_last_log = 0;
                 }
             }
+
+            assert!(
+                logged.contains("Done"),
+                "Blargg test ROM \"{}\" failed: {}",
+                $file,
+                logged.trim().replace("\n", " ")
+            );
+
+            log::info!("{} - \"{}\"", stringify!($name), logged.trim());
         }
     };
 }
