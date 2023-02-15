@@ -209,8 +209,10 @@ impl Cpu {
 
             // LD HL, SP+n
             0xF8 => {
-                let n = self.fetch8(mem); // TODO: signed
-                self.regs.set_hl(self.regs.sp + n as u16); // TODO: flags
+                let n = self.fetch8(mem);
+                let result =
+                    alu::add16_with_signed_byte_operand(&mut self.regs.flags, self.regs.sp, n);
+                self.regs.set_hl(result);
                 3
             }
 
@@ -479,8 +481,9 @@ impl Cpu {
 
             // ADD SP, n
             0xE8 => {
-                let n = self.fetch8(mem); // TODO: sign
-                self.regs.sp = alu::add16_variant(&mut self.regs.flags, self.regs.sp, n as u16);
+                let n = self.fetch8(mem);
+                self.regs.sp =
+                    alu::add16_with_signed_byte_operand(&mut self.regs.flags, self.regs.sp, n);
                 4
             }
 
@@ -540,17 +543,17 @@ impl Cpu {
 
             // JR n
             0x18 => {
-                let n = self.fetch8(mem); // TODO: signed
-                self.regs.pc += n as u16;
+                let n = self.fetch8(mem) as i8 as i32;
+                self.regs.pc = ((self.regs.pc as u32 as i32) + n) as u16;
                 3
             }
 
             // JR flag, n
             0x20 | 0x28 | 0x30 | 0x38 => {
-                let n = self.fetch8(mem); // TODO: signed
+                let n = self.fetch8(mem) as i8 as i32;
 
                 if self.evaluate_flag_condition(opcode.ff()) {
-                    self.regs.pc += n as u16;
+                    self.regs.pc = ((self.regs.pc as u32 as i32) + n) as u16;
                     3
                 } else {
                     2

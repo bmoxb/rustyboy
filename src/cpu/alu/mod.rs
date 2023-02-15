@@ -83,7 +83,9 @@ pub fn add16(flags: &mut Flags, x: u16, y: u16) -> u16 {
 
 // 16-bit addition except half-carry occurs at bit 3 and the zero flag is set - affects all flags.
 // https://stackoverflow.com/questions/57958631/game-boy-half-carry-flag-and-16-bit-instructions-especially-opcode-0xe8
-pub fn add16_variant(flags: &mut Flags, x: u16, y: u16) -> u16 {
+pub fn add16_with_signed_byte_operand(flags: &mut Flags, x: u16, y: u8) -> u16 {
+    let y = y as i8 as i16 as u16;
+
     let (result, carry) = x.overflowing_add(y);
 
     flags
