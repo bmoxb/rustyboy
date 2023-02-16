@@ -202,7 +202,10 @@ pub fn daa(flags: &mut Flags, mut value: u8) -> u8 {
     // This implementation is based on https://ehaskins.com/2018-01-30%20Z80%20DAA/ so thank you to the author of that
     // post!
 
+    // TODO: Blargg test for DAA fails.
+
     let mut correction = 0;
+    let mut carry = false;
 
     if flags.get(Flag::HalfCarry) || (!flags.get(Flag::Subtraction) && (value & 0xF) > 9) {
         correction |= 0x6;
@@ -210,7 +213,7 @@ pub fn daa(flags: &mut Flags, mut value: u8) -> u8 {
 
     if flags.get(Flag::Carry) || (!flags.get(Flag::Subtraction) && value > 0x99) {
         correction |= 0x60;
-        flags.set(Flag::Carry, true);
+        carry = true;
     }
 
     if flags.get(Flag::Subtraction) {
@@ -219,7 +222,10 @@ pub fn daa(flags: &mut Flags, mut value: u8) -> u8 {
         value = value.wrapping_add(correction);
     }
 
-    flags.set(Flag::Zero, value == 0);
+    flags
+        .set(Flag::Zero, value == 0)
+        .set(Flag::HalfCarry, false)
+        .set(Flag::Carry, carry);
 
     value
 }

@@ -1,3 +1,8 @@
+use crate::cpu::Interrupt;
+
+const INTE_ADDR: u16 = 0xFFFF;
+const INTF_ADDR: u16 = 0xFF0F;
+
 // TODO: Proper memory implementation!
 pub struct Memory {
     mem: [u8; 0x10000],
@@ -53,8 +58,32 @@ impl Memory {
         self.mem[addr as usize + 1] = (value >> 8) as u8;
     }
 
-    #[allow(unused)]
     pub fn take_logged_char(&mut self) -> Option<char> {
         self.logged_char.take()
+    }
+
+    pub fn interrupt_enable_register(&self) -> u8 {
+        self.read8(INTE_ADDR)
+    }
+
+    pub fn interrupt_flag_register(&self) -> u8 {
+        self.read8(INTF_ADDR)
+    }
+
+    pub fn enable_interrupt(&mut self, int: Interrupt, value: bool) {
+        if value {
+            self.mem[INTE_ADDR as usize] |= int.mask();
+        } else {
+            self.mem[INTE_ADDR as usize] &= !int.mask();
+        }
+        // TODO: inline function to set bits
+    }
+
+    pub fn flag_interrupt(&mut self, int: Interrupt, value: bool) {
+        if value {
+            self.mem[INTF_ADDR as usize] |= int.mask();
+        } else {
+            self.mem[INTF_ADDR as usize] &= !int.mask();
+        }
     }
 }

@@ -3,18 +3,20 @@ mod tests;
 
 mod alu;
 mod ime;
+mod interrupts;
 mod opcode;
 mod registers;
 
 use crate::memory::Memory;
 
 use ime::InterruptMasterEnable;
+pub use interrupts::Interrupt;
 use opcode::Opcode;
 use registers::{Flag, Flags, Registers};
 
 pub struct Cpu {
     regs: Registers,
-    state: State,
+    halted: bool,
     ime: InterruptMasterEnable,
 }
 
@@ -22,18 +24,78 @@ impl Cpu {
     pub fn new() -> Self {
         Cpu {
             regs: Registers {
+                a: 0x01,
+                flags: {
+                    let mut f = Flags::default();
+                    f.set(Flag::Zero, true);
+                    f
+                },
+                b: 0x00,
+                c: 0x13,
+                d: 0x00,
+                e: 0xD8,
+                h: 0x01,
+                l: 0x4D,
                 sp: 0xFFFE,
                 pc: 0x100,
-                ..Default::default()
             },
-            state: State::Running,
-            ime: InterruptMasterEnable::default(),
+            halted: false,
+            ime: InterruptMasterEnable::new(true),
         }
     }
 
     pub fn cycle(&mut self, mem: &mut Memory) -> usize {
-        log::trace!("begin cycle - {}", self.regs);
+        log::trace!("begin cycle - {}, {}", self.regs, self.ime);
 
+        let cycles_taken = if self.handle_interrupts(mem) {
+            4
+        } else if self.halted {
+            1 // NOP
+        } else {
+            self.fetch_execute(mem)
+        };
+
+        self.ime.cycle();
+
+        log::trace!("end cycle - {}, {}", self.regs, self.ime);
+
+        cycles_taken
+    }
+
+    fn handle_interrupts(&mut self, mem: &mut Memory) -> bool {
+        let triggered = mem.interrupt_enable_register() & mem.interrupt_flag_register();
+        if triggered == 0 {
+            return false;
+        }
+
+        let index = triggered.trailing_zeros();
+        if let Some(int) = Interrupt::from_index(index) {
+            log::debug!("interrupt triggered {int}");
+
+            if self.halted {
+                log::trace!("no longer halted due to interrupt being triggered");
+                self.halted = false;
+            }
+
+            if self.ime.enabled() {
+                log::trace!("calling handler for triggered interrupt {int}");
+
+                mem.flag_interrupt(int, false);
+                self.ime.disable(0);
+
+                self.stack_push(mem, self.regs.pc);
+                self.regs.pc = int.handler_address();
+
+                return true;
+            }
+        } else {
+            log::warn!("invalid interrupt triggered (bit {index}) - ignoring");
+        }
+
+        false
+    }
+
+    fn fetch_execute(&mut self, mem: &mut Memory) -> usize {
         let opcode = Opcode(self.fetch8(mem));
 
         log::trace!(
@@ -49,10 +111,6 @@ impl Cpu {
             opcode,
             cycles_taken
         );
-
-        self.ime.cycle();
-
-        log::trace!("end cycle - {}", self.regs);
 
         cycles_taken
     }
@@ -646,7 +704,7 @@ impl Cpu {
 
             // HALT
             0x76 => {
-                self.state = State::Halted;
+                self.halted = true;
                 1
             }
 
@@ -660,7 +718,7 @@ impl Cpu {
                     );
                     self.regs.pc -= 1; // go back so that the fetched byte does get executed
                 }
-                self.state = State::Stopped;
+                self.halted = true; // TODO
                 1
             }
 
@@ -922,10 +980,4 @@ impl Cpu {
         let result = f(&mut self.regs.flags, x);
         mem.write8(self.regs.hl(), result);
     }
-}
-
-enum State {
-    Running,
-    Halted,
-    Stopped,
 }
