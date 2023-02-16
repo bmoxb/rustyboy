@@ -7,6 +7,7 @@ mod interrupts;
 mod opcode;
 mod registers;
 
+use crate::bits::modify_bit;
 use crate::memory::Memory;
 
 use ime::InterruptMasterEnable;
@@ -894,7 +895,7 @@ impl Cpu {
             | 0xF7..=0xFD
             | 0xFF => {
                 let r = self.regs.get8(opcode.yyy());
-                let result = alu::set_bit(opcode.xxx(), r);
+                let result = modify_bit(r, opcode.xxx(), true);
                 self.regs.set8(opcode.yyy(), result);
                 2
             }
@@ -903,7 +904,7 @@ impl Cpu {
             // 0b11xxx110
             0xC6 | 0xCE | 0xD6 | 0xDE | 0xE6 | 0xEE | 0xF6 | 0xFE => {
                 let value = mem.read8(self.regs.hl());
-                let result = alu::set_bit(opcode.xxx(), value);
+                let result = modify_bit(value, opcode.xxx(), true);
                 mem.write8(self.regs.hl(), result);
                 4
             }
@@ -920,7 +921,7 @@ impl Cpu {
             | 0xB7..=0xBD
             | 0xBF => {
                 let r = self.regs.get8(opcode.yyy());
-                let result = alu::reset_bit(opcode.xxx(), r);
+                let result = modify_bit(r, opcode.xxx(), false);
                 self.regs.set8(opcode.yyy(), result);
                 2
             }
@@ -929,7 +930,7 @@ impl Cpu {
             // 0b10xxx110
             0x86 | 0x8E | 0x96 | 0x9E | 0xA6 | 0xAE | 0xB6 | 0xBE => {
                 let value = mem.read8(self.regs.hl());
-                let result = alu::reset_bit(opcode.xxx(), value);
+                let result = modify_bit(value, opcode.xxx(), false);
                 mem.write8(self.regs.hl(), result);
                 4
             }

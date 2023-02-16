@@ -1,3 +1,4 @@
+use crate::bits::modify_bit;
 use crate::cpu::Interrupt;
 
 const INTE_ADDR: u16 = 0xFFFF;
@@ -70,20 +71,17 @@ impl Memory {
         self.read8(INTF_ADDR)
     }
 
-    pub fn enable_interrupt(&mut self, int: Interrupt, value: bool) {
-        if value {
-            self.mem[INTE_ADDR as usize] |= int.mask();
-        } else {
-            self.mem[INTE_ADDR as usize] &= !int.mask();
-        }
-        // TODO: inline function to set bits
+    pub fn enable_interrupt(&mut self, int: Interrupt, enabled: bool) {
+        self.write8(
+            INTE_ADDR,
+            modify_bit(self.read8(INTE_ADDR), int.bit(), enabled),
+        );
     }
 
-    pub fn flag_interrupt(&mut self, int: Interrupt, value: bool) {
-        if value {
-            self.mem[INTF_ADDR as usize] |= int.mask();
-        } else {
-            self.mem[INTF_ADDR as usize] &= !int.mask();
-        }
+    pub fn flag_interrupt(&mut self, int: Interrupt, flagged: bool) {
+        self.write8(
+            INTF_ADDR,
+            modify_bit(self.read8(INTF_ADDR), int.bit(), flagged),
+        )
     }
 }

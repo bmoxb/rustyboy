@@ -24,8 +24,8 @@ impl Interrupt {
         0x40 + (0x8 * (*self as u16))
     }
 
-    pub fn mask(&self) -> u8 {
-        1 << (*self as u8)
+    pub fn bit(&self) -> u8 {
+        *self as u8
     }
 }
 
@@ -35,7 +35,7 @@ impl fmt::Display for Interrupt {
             f,
             "{:?} (bit {}, INT 0x{:X})",
             self,
-            *self as u8,
+            self.bit(),
             self.handler_address()
         )
     }

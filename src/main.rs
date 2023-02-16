@@ -1,5 +1,6 @@
 use std::{env, fs};
 
+mod bits;
 mod cpu;
 mod memory;
 

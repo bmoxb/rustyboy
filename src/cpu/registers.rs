@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::bits::{modify_bit, toggle_bit};
+
 #[derive(Default)]
 pub struct Registers {
     pub a: u8,
@@ -155,17 +157,12 @@ impl Flags {
     }
 
     pub fn set(&mut self, flag: Flag, value: bool) -> &mut Self {
-        let mask = 1 << flag.bit();
-        if value {
-            self.0 |= mask;
-        } else {
-            self.0 &= !mask;
-        }
+        self.0 = modify_bit(self.0, flag.bit(), value);
         self
     }
 
     pub fn toggle(&mut self, flag: Flag) -> &mut Self {
-        self.0 ^= 1 << flag.bit();
+        self.0 = toggle_bit(self.0, flag.bit());
         self
     }
 }
@@ -186,20 +183,15 @@ impl fmt::Display for Flags {
 
 #[derive(Clone, Copy)]
 pub enum Flag {
-    Zero,
-    Subtraction,
-    HalfCarry,
     Carry,
+    HalfCarry,
+    Subtraction,
+    Zero,
 }
 
 impl Flag {
-    fn bit(&self) -> usize {
-        match self {
-            Flag::Zero => 7,
-            Flag::Subtraction => 6,
-            Flag::HalfCarry => 5,
-            Flag::Carry => 4,
-        }
+    fn bit(&self) -> u8 {
+        *self as u8 + 4
     }
 }
 

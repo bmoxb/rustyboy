@@ -181,16 +181,6 @@ pub fn test_bit(flags: &mut Flags, bit: u8, value: u8) {
         .set(Flag::HalfCarry, false);
 }
 
-pub fn set_bit(bit: u8, value: u8) -> u8 {
-    let mask = 1 << bit;
-    value | mask
-}
-
-pub fn reset_bit(bit: u8, value: u8) -> u8 {
-    let mask = !(1 << bit);
-    value & mask
-}
-
 pub fn swap_nibbles(flags: &mut Flags, value: u8) -> u8 {
     set_bitwise_flags(flags, value, false);
     let upper = value >> 4;

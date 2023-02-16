@@ -238,22 +238,6 @@ fn bit_testing() {
 }
 
 #[test]
-fn bit_setting() {
-    assert_eq!(set_bit(0, 0), 1);
-    assert_eq!(set_bit(0, 1), 1);
-    assert_eq!(set_bit(2, 0b10011), 0b10111);
-    assert_eq!(set_bit(7, 0b01111111), 0xFF);
-}
-
-#[test]
-fn bit_resetting() {
-    assert_eq!(reset_bit(0, 0), 0);
-    assert_eq!(reset_bit(0, 1), 0);
-    assert_eq!(reset_bit(3, 0b1010), 0b10);
-    assert_eq!(reset_bit(7, 0b10000000), 0);
-}
-
-#[test]
 fn nibble_swapping() {
     let mut flags = Flags::default();
     // we need to ensure flags are reset so let's set them now
