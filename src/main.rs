@@ -1,3 +1,5 @@
+use std::{env, fs};
+
 mod cpu;
 mod memory;
 
@@ -7,7 +9,16 @@ fn main() {
     let mut mem = memory::Memory::new();
     let mut cpu = cpu::Cpu::new();
 
-    cpu.cycle(&mut mem);
+    let args: Vec<String> = env::args().collect();
+    let rom = fs::read(&args[1]).unwrap();
 
-    mem.write16(0x1234, 0xDEAD);
+    mem.load(&rom);
+
+    loop {
+        cpu.cycle(&mut mem);
+
+        if let Some(char) = mem.take_logged_char() {
+            print!("{char}");
+        }
+    }
 }
