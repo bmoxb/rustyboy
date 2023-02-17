@@ -13,7 +13,7 @@ use crate::memory::Memory;
 use ime::InterruptMasterEnable;
 pub use interrupts::Interrupt;
 use opcode::Opcode;
-use registers::{Flag, Flags, Registers};
+use registers::{Flags, Registers};
 
 pub struct Cpu {
     regs: Registers,
@@ -26,11 +26,7 @@ impl Cpu {
         Cpu {
             regs: Registers {
                 a: 0x01,
-                flags: {
-                    let mut f = Flags::default();
-                    f.set(Flag::Zero, true);
-                    f
-                },
+                flags: Flags::new(false, false, false, true),
                 b: 0x00,
                 c: 0x13,
                 d: 0x00,
@@ -682,21 +678,17 @@ impl Cpu {
 
             // CCF
             0x3F => {
-                self.regs
-                    .flags
-                    .set(Flag::Subtraction, false)
-                    .set(Flag::HalfCarry, false)
-                    .toggle(Flag::Carry);
+                self.regs.flags.set_subtraction(false);
+                self.regs.flags.set_half_carry(false);
+                self.regs.flags.toggle_carry();
                 1
             }
 
             // SCF
             0x37 => {
-                self.regs
-                    .flags
-                    .set(Flag::Subtraction, false)
-                    .set(Flag::HalfCarry, false)
-                    .set(Flag::Carry, true);
+                self.regs.flags.set_subtraction(false);
+                self.regs.flags.set_half_carry(false);
+                self.regs.flags.set_carry(true);
                 1
             }
 
@@ -962,10 +954,10 @@ impl Cpu {
 
     fn evaluate_flag_condition(&self, ff: u8) -> bool {
         match ff {
-            0 => !self.regs.flags.get(Flag::Zero),
-            1 => !self.regs.flags.get(Flag::Zero),
-            2 => self.regs.flags.get(Flag::Zero),
-            3 => self.regs.flags.get(Flag::Carry),
+            0 => !self.regs.flags.zero(),
+            1 => !self.regs.flags.carry(),
+            2 => self.regs.flags.zero(),
+            3 => self.regs.flags.carry(),
             _ => panic!("{ff} is an unknown flag condition"),
         }
     }

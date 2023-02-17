@@ -1,6 +1,18 @@
 use std::fmt;
 
-use crate::bits::{modify_bit, toggle_bit};
+use crate::bits::{get_bit, modify_bit, toggle_bit};
+
+macro_rules! reg_pair {
+    ($get:ident, $set:ident, $self:ident, $x:ident, $y:ident) => {
+        pub fn $get(&$self) -> u16 {
+            u16::from_be_bytes([$self.$x, $self.$y])
+        }
+
+        pub fn $set(&mut $self, value: u16) {
+            [$self.$x, $self.$y] = value.to_be_bytes();
+        }
+    };
+}
 
 #[derive(Default)]
 pub struct Registers {
@@ -46,22 +58,25 @@ impl Registers {
         *reg = value;
     }
 
+    pub fn af(&self) -> u16 {
+        u16::from_be_bytes([self.a, self.flags.0])
+    }
+
+    pub fn set_af(&mut self, value: u16) {
+        [self.a, self.flags.0] = value.to_be_bytes();
+        self.flags.0 &= 0xF0; // least sig nibble of F must always be 0b0000
+    }
+
+    reg_pair!(bc, set_bc, self, b, c);
+    reg_pair!(de, set_de, self, d, e);
+    reg_pair!(hl, set_hl, self, h, l);
+
     pub fn get16_with_sp(&self, index: u8) -> u16 {
         self.get16(index, self.sp)
     }
 
     pub fn get16_with_af(&self, index: u8) -> u16 {
         self.get16(index, self.af())
-    }
-
-    fn get16(&self, index: u8, last: u16) -> u16 {
-        match index {
-            0 => self.bc(),
-            1 => self.de(),
-            2 => self.hl(),
-            3 => last,
-            _ => panic!("16-bit register index {index} out of bounds"),
-        }
     }
 
     pub fn set16_with_sp(&mut self, index: u8, value: u16) {
@@ -80,38 +95,6 @@ impl Registers {
         }
     }
 
-    pub fn af(&self) -> u16 {
-        u16::from_be_bytes([self.a, (self.flags.0 & 0xF0)]) // least sig nibble of F must always be 0b0000
-    }
-
-    pub fn bc(&self) -> u16 {
-        u16::from_be_bytes([self.b, self.c])
-    }
-
-    pub fn de(&self) -> u16 {
-        u16::from_be_bytes([self.d, self.e])
-    }
-
-    pub fn hl(&self) -> u16 {
-        u16::from_be_bytes([self.h, self.l])
-    }
-
-    pub fn set_af(&mut self, value: u16) {
-        set_combined_reg(&mut self.a, &mut self.flags.0, value);
-    }
-
-    pub fn set_bc(&mut self, value: u16) {
-        set_combined_reg(&mut self.b, &mut self.c, value);
-    }
-
-    pub fn set_de(&mut self, value: u16) {
-        set_combined_reg(&mut self.d, &mut self.e, value);
-    }
-
-    pub fn set_hl(&mut self, value: u16) {
-        set_combined_reg(&mut self.h, &mut self.l, value);
-    }
-
     fn set16(&mut self, index: u8, value: u16) {
         match index {
             0 => self.set_bc(value),
@@ -121,12 +104,16 @@ impl Registers {
             _ => panic!("16-bit register index {index} out of bounds"),
         }
     }
-}
 
-#[inline]
-fn set_combined_reg(high: &mut u8, low: &mut u8, value: u16) {
-    *high = ((value >> 8) & 0xFF) as u8;
-    *low = (value & 0xFF) as u8;
+    fn get16(&self, index: u8, last: u16) -> u16 {
+        match index {
+            0 => self.bc(),
+            1 => self.de(),
+            2 => self.hl(),
+            3 => last,
+            _ => panic!("16-bit register index {index} out of bounds"),
+        }
+    }
 }
 
 impl fmt::Display for Registers {
@@ -148,50 +135,53 @@ impl fmt::Display for Registers {
     }
 }
 
-#[derive(Default, Debug, PartialEq)]
+macro_rules! flag {
+    ($get:ident, $set:ident, $toggle:ident, $bit:literal) => {
+        pub fn $get(&self) -> bool {
+            get_bit(self.0, $bit)
+        }
+
+        pub fn $set(&mut self, value: bool) {
+            self.0 = modify_bit(self.0, $bit, value);
+        }
+
+        #[allow(unused)]
+        pub fn $toggle(&mut self) {
+            self.0 = toggle_bit(self.0, $bit);
+        }
+    };
+}
+
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub struct Flags(u8);
 
 impl Flags {
-    pub fn get(&self, flag: Flag) -> bool {
-        (self.0 & (1 << flag.bit())) != 0
+    pub fn new(c: bool, h: bool, n: bool, z: bool) -> Self {
+        let mut f = Flags::default();
+        f.set_carry(c);
+        f.set_half_carry(h);
+        f.set_subtraction(n);
+        f.set_zero(z);
+        f
     }
 
-    pub fn set(&mut self, flag: Flag, value: bool) -> &mut Self {
-        self.0 = modify_bit(self.0, flag.bit(), value);
-        self
-    }
-
-    pub fn toggle(&mut self, flag: Flag) -> &mut Self {
-        self.0 = toggle_bit(self.0, flag.bit());
-        self
-    }
+    flag!(carry, set_carry, toggle_carry, 4);
+    flag!(half_carry, set_half_carry, toggle_half_carry, 5);
+    flag!(subtraction, set_subtraction, toggle_subtraction, 6);
+    flag!(zero, set_zero, toggle_zero, 7);
 }
 
 impl fmt::Display for Flags {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{:#04X} (Z={}, N={}, H={}, C={})",
+            "{:#04X} (C={}, H={}, N={}, Z={})",
             self.0,
-            self.get(Flag::Zero) as u8,
-            self.get(Flag::Subtraction) as u8,
-            self.get(Flag::HalfCarry) as u8,
-            self.get(Flag::Carry) as u8,
+            self.carry(),
+            self.half_carry(),
+            self.subtraction(),
+            self.zero()
         )
-    }
-}
-
-#[derive(Clone, Copy)]
-pub enum Flag {
-    Carry,
-    HalfCarry,
-    Subtraction,
-    Zero,
-}
-
-impl Flag {
-    fn bit(&self) -> u8 {
-        *self as u8 + 4
     }
 }
 
@@ -228,25 +218,20 @@ mod tests {
 
     #[test]
     fn get_set_flags() {
-        fn assert_flags(flags: &Flags, z: bool, n: bool, h: bool, c: bool) {
-            assert_eq!(flags.get(Flag::Zero), z);
-            assert_eq!(flags.get(Flag::Subtraction), n);
-            assert_eq!(flags.get(Flag::HalfCarry), h);
-            assert_eq!(flags.get(Flag::Carry), c);
-        }
-
         let mut regs = Registers::default();
         regs.set_af(0b01010000);
-        assert_flags(&regs.flags, false, true, false, true);
+        assert_eq!(regs.flags, Flags::new(true, false, true, false));
 
         let mut flags = Flags::default();
 
-        assert_flags(&flags, false, false, false, false);
+        assert_eq!(flags.0, 0);
 
-        flags.set(Flag::Zero, true).set(Flag::HalfCarry, true);
-        assert_flags(&flags, true, false, true, false);
+        flags.set_zero(true);
+        flags.set_half_carry(true);
+        assert_eq!(flags, Flags::new(false, true, false, true));
 
-        flags.toggle(Flag::Carry).toggle(Flag::HalfCarry);
-        assert_flags(&flags, true, false, false, true);
+        flags.toggle_carry();
+        flags.toggle_half_carry();
+        assert_eq!(flags, Flags::new(true, false, false, true));
     }
 }

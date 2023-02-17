@@ -1,7 +1,9 @@
 #[cfg(test)]
 mod tests;
 
-use super::{Flag, Flags};
+use crate::bits::{get_bit, modify_bit};
+
+use super::Flags;
 
 // 8-bit increase - affects zero, subtraction, and half carry flags.
 pub fn inc8(flags: &mut Flags, x: u8) -> u8 {
@@ -32,18 +34,18 @@ pub fn add8(flags: &mut Flags, x: u8, y: u8) -> u8 {
     let (result, carry) = x.overflowing_add(y);
 
     set_zero_subtraction_half_carry_add(flags, result, x, y, 0);
-    flags.set(Flag::Carry, carry);
+    flags.set_carry(carry);
 
     result
 }
 
 // 8-bit addition with carry - affects all flags.
 pub fn adc8(flags: &mut Flags, x: u8, y: u8) -> u8 {
-    let c = flags.get(Flag::Carry) as u8;
+    let c = flags.carry() as u8;
     let result = x.wrapping_add(y).wrapping_add(c);
 
     set_zero_subtraction_half_carry_add(flags, result, x, y, c);
-    flags.set(Flag::Carry, (x as u16) + (y as u16) + (c as u16) > 0xFF);
+    flags.set_carry((x as u16) + (y as u16) + (c as u16) > 0xFF);
 
     result
 }
@@ -53,18 +55,18 @@ pub fn sub8(flags: &mut Flags, x: u8, y: u8) -> u8 {
     let (result, carry) = x.overflowing_sub(y);
 
     set_zero_subtraction_half_carry_sub(flags, result, x, y, 0);
-    flags.set(Flag::Carry, carry);
+    flags.set_carry(carry);
 
     result
 }
 
 // 8-bit subtraction with carry - affects all flags.
 pub fn sbc8(flags: &mut Flags, x: u8, y: u8) -> u8 {
-    let c = flags.get(Flag::Carry) as u8;
+    let c = flags.carry() as u8;
     let result = x.wrapping_sub(y).wrapping_sub(c);
 
     set_zero_subtraction_half_carry_sub(flags, result, x, y, c);
-    flags.set(Flag::Carry, (x as u16) < (y as u16) + (c as u16));
+    flags.set_carry((x as u16) < (y as u16) + (c as u16));
 
     result
 }
@@ -73,10 +75,9 @@ pub fn sbc8(flags: &mut Flags, x: u8, y: u8) -> u8 {
 pub fn add16(flags: &mut Flags, x: u16, y: u16) -> u16 {
     let (result, carry) = x.overflowing_add(y);
 
-    flags
-        .set(Flag::Subtraction, false)
-        .set(Flag::HalfCarry, (x & 0x7FF) + (x & 0x7FF) > 0x7FF) // carry from bit 11
-        .set(Flag::Carry, carry);
+    flags.set_subtraction(false);
+    flags.set_half_carry((x & 0x7FF) + (x & 0x7FF) > 0x7FF); // carry from bit 11
+    flags.set_carry(carry);
 
     result
 }
@@ -88,11 +89,10 @@ pub fn add16_with_signed_byte_operand(flags: &mut Flags, x: u16, y: u8) -> u16 {
 
     let (result, carry) = x.overflowing_add(y);
 
-    flags
-        .set(Flag::Zero, false)
-        .set(Flag::Subtraction, false)
-        .set(Flag::HalfCarry, (x & 0xF) + (y & 0xF) > 0xF)
-        .set(Flag::Carry, carry);
+    flags.set_zero(false);
+    flags.set_subtraction(false);
+    flags.set_half_carry((x & 0xF) + (y & 0xF) > 0xF);
+    flags.set_carry(carry);
 
     result
 }
@@ -116,75 +116,92 @@ pub fn bitwise_xor(flags: &mut Flags, x: u8, y: u8) -> u8 {
 }
 
 pub fn bitwise_not(flags: &mut Flags, x: u8) -> u8 {
-    flags
-        .set(Flag::Subtraction, true)
-        .set(Flag::HalfCarry, true);
+    flags.set_subtraction(true);
+    flags.set_half_carry(true);
     !x
 }
 
 pub fn rotate_left(flags: &mut Flags, x: u8) -> u8 {
-    let carry_bit = x >> 7;
-    let result = (x << 1) | carry_bit;
-    set_rotation_flags(flags, result, carry_bit);
-    result
+    let carry_bit = get_bit(x, 7);
+
+    let mut shifted = x << 1;
+    shifted = modify_bit(shifted, 0, carry_bit);
+
+    set_rotation_flags(flags, shifted, carry_bit);
+
+    shifted
 }
 
 pub fn rotate_left_through_carry_flag(flags: &mut Flags, x: u8) -> u8 {
-    let carry_bit = x >> 7;
-    let result = (x << 1) | (flags.get(Flag::Carry) as u8);
-    set_rotation_flags(flags, result, carry_bit);
-    result
+    let carry_bit = get_bit(x, 7);
+
+    let mut shifted = x << 1;
+    shifted = modify_bit(shifted, 0, flags.carry());
+
+    set_rotation_flags(flags, shifted, carry_bit);
+
+    shifted
 }
 
 pub fn shift_left(flags: &mut Flags, x: u8) -> u8 {
-    let carry_bit = x >> 7;
-    let result = x << 1;
-    set_rotation_flags(flags, result, carry_bit);
-    result
+    let carry_bit = get_bit(x, 7);
+    let shifted = x << 1;
+    set_rotation_flags(flags, shifted, carry_bit);
+    shifted
 }
 
 pub fn rotate_right(flags: &mut Flags, x: u8) -> u8 {
-    let carry_bit = x & 1;
-    let result = (x >> 1) | (carry_bit << 7);
-    set_rotation_flags(flags, result, carry_bit);
-    result
+    let carry_bit = get_bit(x, 0);
+
+    let mut shifted = x >> 1;
+    shifted = modify_bit(shifted, 7, carry_bit);
+
+    set_rotation_flags(flags, shifted, carry_bit);
+
+    shifted
 }
 
 pub fn rotate_right_through_carry_flag(flags: &mut Flags, x: u8) -> u8 {
-    let carry_bit = x & 1;
-    let result = (x >> 1) | ((flags.get(Flag::Carry) as u8) << 7);
-    set_rotation_flags(flags, result, carry_bit);
-    result
+    let carry_bit = get_bit(x, 0);
+
+    let mut shifted = x >> 1;
+    shifted = modify_bit(shifted, 7, flags.carry());
+
+    set_rotation_flags(flags, shifted, carry_bit);
+
+    shifted
 }
 
 pub fn shift_right_leave_msb(flags: &mut Flags, x: u8) -> u8 {
-    let carry_bit = x & 1;
-    let result = (x >> 1) + (x & 0x80);
-    set_rotation_flags(flags, result, carry_bit);
-    result
+    let carry_bit = get_bit(x, 0);
+    let most_sig_bit = get_bit(x, 7);
+
+    let mut shifted = x >> 1;
+    shifted = modify_bit(shifted, 7, most_sig_bit);
+
+    set_rotation_flags(flags, shifted, carry_bit);
+
+    shifted
 }
 
 pub fn shift_right_clear_msb(flags: &mut Flags, x: u8) -> u8 {
-    let carry_bit = x & 1;
-    let result = x >> 1;
-    set_rotation_flags(flags, result, carry_bit);
-    result
+    let carry_bit = get_bit(x, 0);
+    let shifted = x >> 1;
+    set_rotation_flags(flags, shifted, carry_bit);
+    shifted
 }
 
 pub fn test_bit(flags: &mut Flags, bit: u8, value: u8) {
-    let mask = 1 << bit;
-    let bit_set = (value & mask) != 0;
-
-    flags
-        .set(Flag::Zero, !bit_set)
-        .set(Flag::Subtraction, false)
-        .set(Flag::HalfCarry, false);
+    let set = get_bit(value, bit);
+    flags.set_zero(!set);
+    flags.set_subtraction(false);
+    flags.set_half_carry(false);
 }
 
 pub fn swap_nibbles(flags: &mut Flags, value: u8) -> u8 {
     set_bitwise_flags(flags, value, false);
     let upper = value >> 4;
-    let lower = value & 0b1111;
+    let lower = value & 0x0F;
     (lower << 4) + upper
 }
 
@@ -197,59 +214,54 @@ pub fn daa(flags: &mut Flags, mut value: u8) -> u8 {
     let mut correction = 0;
     let mut carry = false;
 
-    if flags.get(Flag::HalfCarry) || (!flags.get(Flag::Subtraction) && (value & 0xF) > 9) {
+    if flags.half_carry() || (!flags.subtraction() && (value & 0xF) > 9) {
         correction |= 0x6;
     }
 
-    if flags.get(Flag::Carry) || (!flags.get(Flag::Subtraction) && value > 0x99) {
+    if flags.carry() || (!flags.subtraction() && value > 0x99) {
         correction |= 0x60;
         carry = true;
     }
 
-    if flags.get(Flag::Subtraction) {
+    if flags.subtraction() {
         value = value.wrapping_sub(correction);
     } else {
         value = value.wrapping_add(correction);
     }
 
-    flags
-        .set(Flag::Zero, value == 0)
-        .set(Flag::HalfCarry, false)
-        .set(Flag::Carry, carry);
+    flags.set_zero(value == 0);
+    flags.set_half_carry(false);
+    flags.set_carry(carry);
 
     value
 }
 
 #[inline]
-fn set_rotation_flags(flags: &mut Flags, result: u8, carry_bit: u8) {
-    flags
-        .set(Flag::Zero, result == 0)
-        .set(Flag::Subtraction, false)
-        .set(Flag::HalfCarry, false)
-        .set(Flag::Carry, carry_bit != 0);
+fn set_rotation_flags(flags: &mut Flags, result: u8, carry: bool) {
+    flags.set_zero(result == 0);
+    flags.set_subtraction(false);
+    flags.set_half_carry(false);
+    flags.set_carry(carry);
 }
 
 #[inline]
 fn set_bitwise_flags(flags: &mut Flags, result: u8, half_carry: bool) {
-    flags
-        .set(Flag::Zero, result == 0)
-        .set(Flag::Subtraction, false)
-        .set(Flag::HalfCarry, half_carry)
-        .set(Flag::Carry, false);
+    flags.set_zero(result == 0);
+    flags.set_subtraction(false);
+    flags.set_half_carry(half_carry);
+    flags.set_carry(false);
 }
 
 #[inline]
 fn set_zero_subtraction_half_carry_add(flags: &mut Flags, result: u8, x: u8, y: u8, c: u8) {
-    flags
-        .set(Flag::Zero, result == 0)
-        .set(Flag::Subtraction, false)
-        .set(Flag::HalfCarry, (x & 0xF) + (y & 0xF) + c > 0xF);
+    flags.set_zero(result == 0);
+    flags.set_subtraction(false);
+    flags.set_half_carry((x & 0xF) + (y & 0xF) + c > 0xF);
 }
 
 #[inline]
 fn set_zero_subtraction_half_carry_sub(flags: &mut Flags, result: u8, x: u8, y: u8, c: u8) {
-    flags
-        .set(Flag::Zero, result == 0)
-        .set(Flag::Subtraction, true)
-        .set(Flag::HalfCarry, (x & 0xF) < (y & 0xF) + c);
+    flags.set_zero(result == 0);
+    flags.set_subtraction(true);
+    flags.set_half_carry((x & 0xF) < (y & 0xF) + c);
 }

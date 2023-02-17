@@ -1,8 +1,8 @@
 use crate::bits::modify_bit;
 use crate::cpu::Interrupt;
 
-const INTE_ADDR: u16 = 0xFFFF;
-const INTF_ADDR: u16 = 0xFF0F;
+const INTERRUPT_ENABLE_ADDR: u16 = 0xFFFF;
+const INTERRUPT_FLAG_ADDR: u16 = 0xFF0F;
 
 // TODO: Proper memory implementation!
 pub struct Memory {
@@ -55,8 +55,9 @@ impl Memory {
             value,
             self.read16(addr)
         );
-        self.mem[addr as usize] = (value & 0xFF) as u8; // little endian so LSB first
-        self.mem[addr as usize + 1] = (value >> 8) as u8;
+        let [msb, lsb] = value.to_be_bytes();
+        self.mem[addr as usize] = lsb; // little endian so LSB first
+        self.mem[addr as usize + 1] = msb;
     }
 
     pub fn take_logged_char(&mut self) -> Option<char> {
@@ -64,24 +65,24 @@ impl Memory {
     }
 
     pub fn interrupt_enable_register(&self) -> u8 {
-        self.read8(INTE_ADDR)
+        self.read8(INTERRUPT_ENABLE_ADDR)
     }
 
     pub fn interrupt_flag_register(&self) -> u8 {
-        self.read8(INTF_ADDR)
+        self.read8(INTERRUPT_FLAG_ADDR)
     }
 
     pub fn enable_interrupt(&mut self, int: Interrupt, enabled: bool) {
         self.write8(
-            INTE_ADDR,
-            modify_bit(self.read8(INTE_ADDR), int.bit(), enabled),
+            INTERRUPT_ENABLE_ADDR,
+            modify_bit(self.read8(INTERRUPT_ENABLE_ADDR), int.bit(), enabled),
         );
     }
 
     pub fn flag_interrupt(&mut self, int: Interrupt, flagged: bool) {
         self.write8(
-            INTF_ADDR,
-            modify_bit(self.read8(INTF_ADDR), int.bit(), flagged),
+            INTERRUPT_FLAG_ADDR,
+            modify_bit(self.read8(INTERRUPT_FLAG_ADDR), int.bit(), flagged),
         )
     }
 }
