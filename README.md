@@ -9,12 +9,13 @@
   * [x] Implement instructions
   * [x] Tests for all instructions
   * [x] Interrupt handling
-* [ ] Memory map
+* [x] Memory map
 * [ ] Timer
 * [ ] Cartridges
-  * [ ] Load the cartridge header
   * [ ] No MBC
   * [ ] MBC-1
+  * [ ] MBC-3
+  * [ ] MBC-5
 * [ ] Rendering
   * [ ] Set up game window
   * [ ] ...
