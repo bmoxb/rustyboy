@@ -62,7 +62,7 @@ impl Cpu {
     }
 
     fn handle_interrupts(&mut self, mem: &mut Memory) -> usize {
-        let triggered = mem.interrupt_enable_register() & mem.interrupt_flag_register();
+        let triggered = mem.io_regs.interrupt_flag & mem.interrupt_enable;
         if triggered == 0 {
             return 0;
         }
