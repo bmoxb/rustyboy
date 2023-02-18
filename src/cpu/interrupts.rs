@@ -20,6 +20,7 @@ impl Interrupt {
             _ => None,
         }
     }
+
     pub fn handler_address(&self) -> u16 {
         0x40 + (0x8 * (*self as u16))
     }

@@ -26,7 +26,7 @@ impl Cpu {
         Cpu {
             regs: Registers {
                 a: 0x01,
-                flags: Flags::new(false, false, false, true),
+                flags: Flags::new(true, true, false, true),
                 b: 0x00,
                 c: 0x13,
                 d: 0x00,
@@ -44,8 +44,10 @@ impl Cpu {
     pub fn cycle(&mut self, mem: &mut Memory) -> usize {
         log::trace!("begin cycle - {}, {}", self.regs, self.ime);
 
-        let cycles_taken = if self.handle_interrupts(mem) {
-            4
+        let interrupt_cycles = self.handle_interrupts(mem);
+
+        let cycles_taken = if interrupt_cycles > 0 {
+            interrupt_cycles
         } else if self.halted {
             1 // NOP
         } else {
@@ -59,23 +61,18 @@ impl Cpu {
         cycles_taken
     }
 
-    fn handle_interrupts(&mut self, mem: &mut Memory) -> bool {
+    fn handle_interrupts(&mut self, mem: &mut Memory) -> usize {
         let triggered = mem.interrupt_enable_register() & mem.interrupt_flag_register();
         if triggered == 0 {
-            return false;
+            return 0;
         }
+
+        let mut cycles_taken = 0;
 
         let index = triggered.trailing_zeros();
         if let Some(int) = Interrupt::from_index(index) {
-            log::debug!("interrupt triggered {int}");
-
-            if self.halted {
-                log::trace!("no longer halted due to interrupt being triggered");
-                self.halted = false;
-            }
-
             if self.ime.enabled() {
-                log::trace!("calling handler for triggered interrupt {int}");
+                log::debug!("interrupt triggered {int} and calling handler");
 
                 mem.flag_interrupt(int, false);
                 self.ime.disable(0);
@@ -83,19 +80,28 @@ impl Cpu {
                 self.stack_push(mem, self.regs.pc);
                 self.regs.pc = int.handler_address();
 
-                return true;
+                cycles_taken += 4;
+            } else if self.halted {
+                // if IME=0 and halted, PC is incremented so as to continue execution after the HALT instruction
+                self.regs.pc += 1;
+            }
+
+            if self.halted {
+                log::trace!("no longer halted due to interrupt being triggered");
+                self.halted = false;
+                cycles_taken += 1;
             }
         } else {
             log::warn!("invalid interrupt triggered (bit {index}) - ignoring");
         }
 
-        false
+        cycles_taken
     }
 
     fn fetch_execute(&mut self, mem: &mut Memory) -> usize {
         let opcode = Opcode(self.fetch8(mem));
 
-        log::trace!(
+        log::debug!(
             "fetched opcode {} from address {:#04X}",
             opcode,
             self.regs.pc - 1
@@ -104,9 +110,7 @@ impl Cpu {
         let cycles_taken = self.execute(opcode, mem);
 
         log::trace!(
-            "executed instruction with opcode {} taking {} machine cycle(s)",
-            opcode,
-            cycles_taken
+            "executed instruction with opcode {opcode} taking {cycles_taken} machine cycle(s)"
         );
 
         cycles_taken
@@ -554,6 +558,7 @@ impl Cpu {
             // RLCA
             0x07 => {
                 self.regs.a = alu::rotate_left(&mut self.regs.flags, self.regs.a);
+                self.regs.flags.set_zero(false); // for rotation instructions on register A, always zero flag = 0
                 1
             }
 
@@ -561,12 +566,14 @@ impl Cpu {
             0x17 => {
                 self.regs.a =
                     alu::rotate_left_through_carry_flag(&mut self.regs.flags, self.regs.a);
+                self.regs.flags.set_zero(false);
                 1
             }
 
             // RRCA
             0x0F => {
                 self.regs.a = alu::rotate_right(&mut self.regs.flags, self.regs.a);
+                self.regs.flags.set_zero(false);
                 1
             }
 
@@ -574,6 +581,7 @@ impl Cpu {
             0x1F => {
                 self.regs.a =
                     alu::rotate_right_through_carry_flag(&mut self.regs.flags, self.regs.a);
+                self.regs.flags.set_zero(false);
                 1
             }
 
@@ -955,8 +963,8 @@ impl Cpu {
     fn evaluate_flag_condition(&self, ff: u8) -> bool {
         match ff {
             0 => !self.regs.flags.zero(),
-            1 => !self.regs.flags.carry(),
-            2 => self.regs.flags.zero(),
+            1 => self.regs.flags.zero(),
+            2 => !self.regs.flags.carry(),
             3 => self.regs.flags.carry(),
             _ => panic!("{ff} is an unknown flag condition"),
         }

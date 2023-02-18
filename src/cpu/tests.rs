@@ -36,7 +36,7 @@ macro_rules! test_rom {
             }
 
             assert!(
-                logged.contains("Done"),
+                logged.contains("Passed"),
                 "Blargg test ROM \"{}\" failed: {}",
                 $file,
                 logged.trim().replace("\n", " ")

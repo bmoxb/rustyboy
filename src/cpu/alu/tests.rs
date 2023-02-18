@@ -133,3 +133,11 @@ fn nibble_swapping() {
     assert_eq!(swap_nibbles(&mut flags, 0), 0);
     assert!(flags.zero());
 }
+
+#[test]
+fn rotation() {
+    let mut flags = Flags::default();
+
+    assert_eq!(rotate_left(&mut flags, 0b11001100), 0b10011001);
+    assert_eq!(flags, Flags::new(true, false, false, false));
+}

@@ -76,7 +76,7 @@ pub fn add16(flags: &mut Flags, x: u16, y: u16) -> u16 {
     let (result, carry) = x.overflowing_add(y);
 
     flags.set_subtraction(false);
-    flags.set_half_carry((x & 0x7FF) + (x & 0x7FF) > 0x7FF); // carry from bit 11
+    flags.set_half_carry((((x & 0xFFF) + (y & 0xFFF)) & 0x1000) == 0x1000); // carry from bit 11
     flags.set_carry(carry);
 
     result
@@ -87,14 +87,12 @@ pub fn add16(flags: &mut Flags, x: u16, y: u16) -> u16 {
 pub fn add16_with_signed_byte_operand(flags: &mut Flags, x: u16, y: u8) -> u16 {
     let y = y as i8 as i16 as u16;
 
-    let (result, carry) = x.overflowing_add(y);
-
     flags.set_zero(false);
     flags.set_subtraction(false);
     flags.set_half_carry((x & 0xF) + (y & 0xF) > 0xF);
-    flags.set_carry(carry);
+    flags.set_carry((x & 0xFF) + (y & 0xFF) > 0xFF);
 
-    result
+    x.wrapping_add(y)
 }
 
 pub fn bitwise_and(flags: &mut Flags, x: u8, y: u8) -> u8 {
@@ -195,7 +193,7 @@ pub fn test_bit(flags: &mut Flags, bit: u8, value: u8) {
     let set = get_bit(value, bit);
     flags.set_zero(!set);
     flags.set_subtraction(false);
-    flags.set_half_carry(false);
+    flags.set_half_carry(true);
 }
 
 pub fn swap_nibbles(flags: &mut Flags, value: u8) -> u8 {
@@ -208,8 +206,6 @@ pub fn swap_nibbles(flags: &mut Flags, value: u8) -> u8 {
 pub fn daa(flags: &mut Flags, mut value: u8) -> u8 {
     // This implementation is based on https://ehaskins.com/2018-01-30%20Z80%20DAA/ so thank you to the author of that
     // post!
-
-    // TODO: Blargg test for DAA fails.
 
     let mut correction = 0;
     let mut carry = false;
