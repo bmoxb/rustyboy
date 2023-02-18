@@ -1,6 +1,7 @@
 use super::*;
 
-use crate::memory::{mbc::NoMBC, Memory};
+use crate::mbc;
+use crate::memory::Memory;
 
 const CYCLES_WITHOUT_LOG_THRESHOLD: usize = 10_000_000;
 
@@ -15,7 +16,7 @@ macro_rules! test_rom {
                 "/roms/cpu_instrs/individual/",
                 $file
             ));
-            let mbc = Box::new(NoMBC::new(rom));
+            let mbc = mbc::from_rom_data(rom);
             let mut mem = Memory::new(mbc);
 
             let mut cpu = Cpu::new();

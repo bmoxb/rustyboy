@@ -1,11 +1,10 @@
 mod ioregisters;
-pub mod mbc;
 
 use ioregisters::InputOutputRegisters;
-use mbc::MemoryBankController;
 
 use crate::bits::modify_bit;
 use crate::cpu::Interrupt;
+use crate::mbc::MemoryBankController;
 
 const VRAM_SIZE: usize = 0x2000;
 const WRAM_SIZE: usize = 0x2000;
