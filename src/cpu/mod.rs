@@ -871,7 +871,7 @@ impl Cpu {
             | 0x77..=0x7D
             | 0x7F => {
                 let r = self.regs.get8(opcode.yyy());
-                alu::test_bit(&mut self.regs.flags, opcode.xxx(), r);
+                alu::test_bit(&mut self.regs.flags, r, opcode.xxx());
                 2
             }
 
@@ -879,7 +879,7 @@ impl Cpu {
             // 0b01xxx110
             0x46 | 0x4E | 0x56 | 0x5E | 0x66 | 0x6E | 0x76 | 0x7E => {
                 let value = mem.read8(self.regs.hl());
-                alu::test_bit(&mut self.regs.flags, opcode.xxx(), value);
+                alu::test_bit(&mut self.regs.flags, value, opcode.xxx());
                 3
             }
 
