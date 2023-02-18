@@ -1,5 +1,6 @@
 use super::*;
-use crate::memory::Memory;
+
+use crate::memory::{mbc::NoMBC, Memory};
 
 const CYCLES_WITHOUT_LOG_THRESHOLD: usize = 10_000_000;
 
@@ -14,11 +15,10 @@ macro_rules! test_rom {
                 "/roms/cpu_instrs/individual/",
                 $file
             ));
+            let mbc = Box::new(NoMBC::new(rom));
+            let mut mem = Memory::new(mbc);
 
             let mut cpu = Cpu::new();
-
-            let mut mem = Memory::new();
-            mem.load(rom);
 
             let mut logged = String::new();
             let mut cycles_since_last_log = 0;
@@ -29,7 +29,9 @@ macro_rules! test_rom {
 
                 cycles_since_last_log += 1;
 
-                if let Some(c) = mem.take_logged_char() {
+                if mem.io_regs.serial_transfer_control == 0x81 {
+                    mem.io_regs.serial_transfer_control = 0;
+                    let c = mem.io_regs.serial_transfer_data as char;
                     logged.push(c);
                     cycles_since_last_log = 0;
                 }

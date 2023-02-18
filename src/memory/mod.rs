@@ -1,31 +1,62 @@
+mod ioregisters;
+pub mod mbc;
+
+use ioregisters::InputOutputRegisters;
+use mbc::MemoryBankController;
+
 use crate::bits::modify_bit;
 use crate::cpu::Interrupt;
 
-const INTERRUPT_ENABLE_ADDR: u16 = 0xFFFF;
-const INTERRUPT_FLAG_ADDR: u16 = 0xFF0F;
+const VRAM_SIZE: usize = 0x2000;
+const WRAM_SIZE: usize = 0x2000;
+const HRAM_SIZE: usize = 0x7F;
 
-// TODO: Proper memory implementation!
 pub struct Memory {
-    mem: [u8; 0x10000],
-    logged_char: Option<char>,
+    vram: [u8; VRAM_SIZE],
+    wram: [u8; WRAM_SIZE],
+    hram: [u8; HRAM_SIZE],
+    mbc: Box<dyn MemoryBankController>,
+    pub io_regs: InputOutputRegisters,
+    pub interrupt_enable: u8,
 }
 
 impl Memory {
-    pub fn new() -> Self {
+    pub fn new(mbc: Box<dyn MemoryBankController>) -> Self {
         Memory {
-            mem: [0; 0x10000],
-            logged_char: None,
-        }
-    }
-
-    pub fn load(&mut self, rom: &[u8]) {
-        for (addr, byte) in rom.iter().enumerate() {
-            self.mem[addr] = *byte;
+            vram: [0; VRAM_SIZE],
+            wram: [0; WRAM_SIZE],
+            hram: [0; HRAM_SIZE],
+            mbc,
+            io_regs: InputOutputRegisters::default(),
+            interrupt_enable: 0,
         }
     }
 
     pub fn read8(&self, addr: u16) -> u8 {
-        self.mem[addr as usize]
+        match addr {
+            0x0000..=0x7FFF => self.mbc.read8(addr),
+            0x8000..=0x9FFF => self.vram[(addr - 0x8000) as usize],
+            0xA000..=0xBFFF => self.mbc.read8(addr),
+            0xC000..=0xDFFF => self.wram[(addr - 0xC000) as usize],
+            0xE000..=0xFDFF => {
+                log::warn!("prohibited address {:#04X} read", addr);
+                self.wram[(addr - 0xE000) as usize]
+            }
+            0xFE00..=0xFE9F => unimplemented!(), // TODO: Sprite attribute table.
+            0xFEA0..=0xFEFF => {
+                log::warn!("prohibited address {:#04X} read", addr);
+                0xFF
+            }
+            0xFF00..=0xFF7F => self.io_regs.read8(addr),
+            0xFF80..=0xFFFE => self.hram[(addr - 0xFF80) as usize],
+            0xFFFF => self.interrupt_enable,
+        }
+    }
+
+    pub fn read16(&self, addr: u16) -> u16 {
+        let lsb = self.read8(addr);
+        let msb = self.read8(addr + 1);
+        u16::from_be_bytes([msb, lsb])
     }
 
     pub fn write8(&mut self, addr: u16, value: u8) {
@@ -35,54 +66,31 @@ impl Memory {
             value,
             self.read8(addr)
         );
-        self.mem[addr as usize] = value;
 
-        if addr == 0xFF02 && value == 0x81 {
-            self.logged_char = Some(self.read8(0xFF01) as char);
+        match addr {
+            0x0000..=0x7FFF => self.mbc.write8(addr, value),
+            0x8000..=0x9FFF => self.vram[(addr - 0x8000) as usize] = value,
+            0xA000..=0xBFFF => self.mbc.write8(addr, value),
+            0xC000..=0xDFFF => self.wram[(addr - 0xC000) as usize] = value,
+            0xE000..=0xFDFF => {
+                log::warn!("prohibited address {:#04X} read", addr);
+                self.wram[(addr - 0xE000) as usize] = value;
+            }
+            0xFE00..=0xFE9F => unimplemented!(), // TODO: Sprite attribute table.
+            0xFEA0..=0xFEFF => log::warn!("prohibited address {:#04X} read", addr),
+            0xFF00..=0xFF7F => self.io_regs.write8(addr, value),
+            0xFF80..=0xFFFE => self.hram[(addr - 0xFF80) as usize] = value,
+            0xFFFF => self.interrupt_enable = value,
         }
     }
 
-    pub fn read16(&self, addr: u16) -> u16 {
-        let lsb = self.mem[addr as usize];
-        let msb = self.mem[addr as usize + 1];
-        u16::from_be_bytes([msb, lsb])
-    }
-
     pub fn write16(&mut self, addr: u16, value: u16) {
-        log::trace!(
-            "at memory address {:#06X}, writing word {:#06X} (replacing previous value {:#06X})",
-            addr,
-            value,
-            self.read16(addr)
-        );
         let [msb, lsb] = value.to_be_bytes();
-        self.mem[addr as usize] = lsb; // little endian so LSB first
-        self.mem[addr as usize + 1] = msb;
+        self.write8(addr, lsb); // little endian so LSB first
+        self.write8(addr + 1, msb);
     }
 
-    pub fn take_logged_char(&mut self) -> Option<char> {
-        self.logged_char.take()
-    }
-
-    pub fn interrupt_enable_register(&self) -> u8 {
-        self.read8(INTERRUPT_ENABLE_ADDR)
-    }
-
-    pub fn interrupt_flag_register(&self) -> u8 {
-        self.read8(INTERRUPT_FLAG_ADDR)
-    }
-
-    pub fn enable_interrupt(&mut self, int: Interrupt, enabled: bool) {
-        self.write8(
-            INTERRUPT_ENABLE_ADDR,
-            modify_bit(self.read8(INTERRUPT_ENABLE_ADDR), int.bit(), enabled),
-        );
-    }
-
-    pub fn flag_interrupt(&mut self, int: Interrupt, flagged: bool) {
-        self.write8(
-            INTERRUPT_FLAG_ADDR,
-            modify_bit(self.read8(INTERRUPT_FLAG_ADDR), int.bit(), flagged),
-        )
+    pub fn flag_interrupt(&mut self, int: Interrupt, value: bool) {
+        self.io_regs.interrupt_flag = modify_bit(self.io_regs.interrupt_flag, int.bit(), value);
     }
 }
