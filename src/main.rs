@@ -17,7 +17,7 @@ fn main() {
         mbc.ram_size()
     );
 
-    let mut gb = gb::GameBoy::new(mbc);
+    let mut gb = gb::GameBoy::new(mbc, true);
 
     loop {
         gb.update(0.0);

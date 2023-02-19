@@ -18,10 +18,11 @@ pub struct Cpu {
     regs: Registers,
     halted: bool,
     ime: InterruptMasterEnable,
+    enable_gb_doctor_logging: bool,
 }
 
 impl Cpu {
-    pub fn new() -> Self {
+    pub fn new(enable_gb_doctor_logging: bool) -> Self {
         Cpu {
             regs: Registers {
                 a: 0x01,
@@ -37,10 +38,15 @@ impl Cpu {
             },
             halted: false,
             ime: InterruptMasterEnable::new(true),
+            enable_gb_doctor_logging,
         }
     }
 
     pub fn cycle(&mut self, mem: &mut Memory) -> usize {
+        if self.enable_gb_doctor_logging {
+            self.print_gb_doctor_log(mem);
+        }
+
         log::trace!("begin cycle - {}, {}", self.regs, self.ime);
 
         let interrupt_cycles = self.handle_interrupts(mem);
@@ -979,5 +985,25 @@ impl Cpu {
         let x = mem.read8(self.regs.hl());
         let result = f(&mut self.regs.flags, x);
         mem.write8(self.regs.hl(), result);
+    }
+
+    fn print_gb_doctor_log(&self, mem: &Memory) {
+        println!(
+            "A:{:02X} F:{:02X} B:{:02X} C:{:02X} D:{:02X} E:{:02X} H:{:02X} L:{:02X} SP:{:04X} PC:{:04X} PCMEM:{:02X},{:02X},{:02X},{:02X}",
+            self.regs.a,
+            self.regs.flags.0,
+            self.regs.b,
+            self.regs.c,
+            self.regs.d,
+            self.regs.e,
+            self.regs.h,
+            self.regs.l,
+            self.regs.sp,
+            self.regs.pc,
+            mem.read8(self.regs.pc),
+            mem.read8(self.regs.pc+1),
+            mem.read8(self.regs.pc+2),
+            mem.read8(self.regs.pc+3),
+        );
     }
 }

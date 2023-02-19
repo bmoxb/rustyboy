@@ -153,7 +153,7 @@ macro_rules! flag {
 }
 
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
-pub struct Flags(u8);
+pub struct Flags(pub u8);
 
 impl Flags {
     pub fn new(c: bool, h: bool, n: bool, z: bool) -> Self {

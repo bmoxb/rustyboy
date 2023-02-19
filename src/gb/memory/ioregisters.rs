@@ -22,6 +22,7 @@ impl InputOutputRegisters {
             0xFF06 => self.timer_modulo,
             0xFF07 => self.timer_control,
             0xFF0F => self.interrupt_flag,
+            0xFF44 => 0x90, // TODO
             _ => 0,
         }
     }

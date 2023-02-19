@@ -18,9 +18,9 @@ pub struct GameBoy {
 }
 
 impl GameBoy {
-    pub fn new(mbc: Box<dyn MemoryBankController>) -> Self {
+    pub fn new(mbc: Box<dyn MemoryBankController>, enable_gb_doctor_logging: bool) -> Self {
         GameBoy {
-            cpu: Cpu::new(),
+            cpu: Cpu::new(enable_gb_doctor_logging),
             mem: Memory::new(mbc),
             timer: Timer::default(),
         }

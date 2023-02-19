@@ -12,8 +12,8 @@ impl Timer {
     pub fn update(&mut self, mem: &mut Memory, cpu_cycles: usize) {
         self.divider_cycles += cpu_cycles;
 
-        if self.divider_cycles >= 255 {
-            self.divider_cycles -= 255;
+        if self.divider_cycles >= 256 {
+            self.divider_cycles -= 256;
             mem.io_regs.divider = mem.io_regs.divider.wrapping_add(1);
         }
 
