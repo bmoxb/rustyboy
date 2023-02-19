@@ -1,6 +1,3 @@
-#[cfg(test)]
-mod tests;
-
 mod alu;
 mod ime;
 mod interrupts;
@@ -8,12 +5,14 @@ mod opcode;
 mod registers;
 
 use crate::bits::modify_bit;
-use crate::memory::Memory;
+use crate::gb::memory::Memory;
 
 use ime::InterruptMasterEnable;
 pub use interrupts::Interrupt;
 use opcode::Opcode;
 use registers::{Flags, Registers};
+
+pub const CLOCK_SPEED: usize = 4194304;
 
 pub struct Cpu {
     regs: Registers,

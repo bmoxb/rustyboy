@@ -1,8 +1,5 @@
 use super::*;
 
-use crate::mbc;
-use crate::memory::Memory;
-
 const CYCLES_WITHOUT_LOG_THRESHOLD: usize = 10_000_000;
 
 macro_rules! test_rom {
@@ -17,23 +14,24 @@ macro_rules! test_rom {
                 $file
             ));
             let mbc = mbc::from_rom_data(rom);
-            let mut mem = Memory::new(mbc);
 
-            let mut cpu = Cpu::new();
+            let mut gb = GameBoy::new(mbc);
 
             let mut logged = String::new();
             let mut cycles_since_last_log = 0;
 
             // continue executing instructions until enough cycles have passed without any output being produced
             while cycles_since_last_log < CYCLES_WITHOUT_LOG_THRESHOLD {
-                cpu.cycle(&mut mem);
+                gb.update(0.0);
 
                 cycles_since_last_log += 1;
 
-                if mem.io_regs.serial_transfer_control == 0x81 {
-                    mem.io_regs.serial_transfer_control = 0;
-                    let c = mem.io_regs.serial_transfer_data as char;
+                if gb.mem.io_regs.serial_transfer_control == 0x81 {
+                    gb.mem.io_regs.serial_transfer_control = 0;
+
+                    let c = gb.mem.io_regs.serial_transfer_data as char;
                     logged.push(c);
+
                     cycles_since_last_log = 0;
                 }
             }

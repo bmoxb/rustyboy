@@ -31,7 +31,7 @@ impl InputOutputRegisters {
             0xFF00 => self.joypad_input = value,
             0xFF01 => self.serial_transfer_data = value,
             0xFF02 => self.serial_transfer_control = value,
-            0xFF04 => self.divider = value,
+            0xFF04 => self.divider = 0, // cannot write directly to divider - can only reset to 0
             0xFF05 => self.timer_counter = value,
             0xFF06 => self.timer_modulo = value,
             0xFF07 => self.timer_control = value,

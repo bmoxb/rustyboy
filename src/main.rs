@@ -1,16 +1,14 @@
 use std::env;
 
 mod bits;
-mod cpu;
-mod mbc;
-mod memory;
+mod gb;
 
 fn main() {
     env_logger::init();
 
     let args: Vec<String> = env::args().collect();
 
-    let mbc = mbc::from_rom_file(&args[1]).unwrap();
+    let mbc = gb::mbc::from_rom_file(&args[1]).unwrap();
 
     println!(
         "ROM Title: {}\nMBC ROM size: {:#X} bytes\nMBC RAM size: {:#X} bytes",
@@ -19,10 +17,9 @@ fn main() {
         mbc.ram_size()
     );
 
-    let mut mem = memory::Memory::new(mbc);
-    let mut cpu = cpu::Cpu::new();
+    let mut gb = gb::GameBoy::new(mbc);
 
     loop {
-        cpu.cycle(&mut mem);
+        gb.update(0.0);
     }
 }
