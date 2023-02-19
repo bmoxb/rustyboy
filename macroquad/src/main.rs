@@ -18,7 +18,7 @@ async fn main() {
         mbc.ram_size()
     );
 
-    let mut gb = rustyboy_core::GameBoy::new(mbc, true);
+    let mut gb = rustyboy_core::GameBoy::new(mbc);
 
     loop {
         let delta = quad::get_frame_time();

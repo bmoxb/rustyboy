@@ -17,7 +17,7 @@ use memory::Memory;
 pub struct GameBoy {
     cpu: Cpu,
     mem: Memory,
-    gb_doctor_logging: Option<Box<dyn std::io::Write>>,
+    pub gb_doctor_logging: Option<Box<dyn std::io::Write>>,
 }
 
 impl GameBoy {
@@ -33,7 +33,7 @@ impl GameBoy {
         // TODO: Proper timing.
 
         if let Some(dst) = &mut self.gb_doctor_logging {
-            write!(
+            writeln!(
                 *dst,
                 "A:{:02X} F:{:02X} B:{:02X} C:{:02X} D:{:02X} E:{:02X} H:{:02X} L:{:02X} SP:{:04X} PC:{:04X} PCMEM:{:02X},{:02X},{:02X},{:02X}",
                 self.cpu.regs.a,

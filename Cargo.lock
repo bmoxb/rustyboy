@@ -488,6 +488,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustyboy_gbdoctor"
+version = "0.1.0"
+dependencies = [
+ "rustyboy_core",
+]
+
+[[package]]
 name = "rustyboy_macroquad"
 version = "0.1.0"
 dependencies = [
