@@ -53,3 +53,33 @@ impl Timer {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::gb::mbc;
+
+    #[test]
+    fn divider() {
+        let mut t = Timer::default();
+        let mut mem = Memory::new(Box::new(mbc::RomOnly::new(&[])));
+
+        // increment divider over time
+        t.update(&mut mem, 256);
+        assert_eq!(mem.io_regs.divider, 1);
+        t.update(&mut mem, 300);
+        assert_eq!(mem.io_regs.divider, 2);
+        t.update(&mut mem, 230);
+        assert_eq!(mem.io_regs.divider, 3);
+
+        // ensure divider wraps around to 0
+        mem.io_regs.divider = 255;
+        t.update(&mut mem, 300);
+        assert_eq!(mem.io_regs.divider, 0);
+
+        // ensure divider register is reset when written to
+        mem.io_regs.divider = 10;
+        mem.write8(0xFF04, 25);
+        assert_eq!(mem.io_regs.divider, 0);
+    }
+}
