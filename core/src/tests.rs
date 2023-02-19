@@ -15,7 +15,7 @@ macro_rules! test_rom {
             ));
             let mbc = mbc::from_rom_data(rom);
 
-            let mut gb = GameBoy::new(mbc, false);
+            let mut gb = GameBoy::new(mbc);
 
             let mut logged = String::new();
             let mut cycles_since_last_log = 0;
@@ -26,10 +26,10 @@ macro_rules! test_rom {
 
                 cycles_since_last_log += 1;
 
-                if gb.mem.io_regs.serial_transfer_control == 0x81 {
-                    gb.mem.io_regs.serial_transfer_control = 0;
+                if gb.mem.serial.control == 0x81 {
+                    gb.mem.serial.control = 0;
 
-                    let c = gb.mem.io_regs.serial_transfer_data as char;
+                    let c = gb.mem.serial.data as char;
                     logged.push(c);
 
                     cycles_since_last_log = 0;

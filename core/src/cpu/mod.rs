@@ -1,6 +1,5 @@
 mod alu;
 mod ime;
-mod interrupts;
 mod opcode;
 mod registers;
 
@@ -8,21 +7,19 @@ use crate::bits::modify_bit;
 use crate::memory::Memory;
 
 use ime::InterruptMasterEnable;
-pub use interrupts::Interrupt;
 use opcode::Opcode;
 use registers::{Flags, Registers};
 
 pub const CLOCK_SPEED: usize = 4194304;
 
 pub struct Cpu {
-    regs: Registers,
+    pub regs: Registers,
     halted: bool,
     ime: InterruptMasterEnable,
-    enable_gb_doctor_logging: bool,
 }
 
 impl Cpu {
-    pub fn new(enable_gb_doctor_logging: bool) -> Self {
+    pub fn new() -> Self {
         Cpu {
             regs: Registers {
                 a: 0x01,
@@ -38,15 +35,10 @@ impl Cpu {
             },
             halted: false,
             ime: InterruptMasterEnable::new(true),
-            enable_gb_doctor_logging,
         }
     }
 
     pub fn cycle(&mut self, mem: &mut Memory) -> usize {
-        if self.enable_gb_doctor_logging {
-            self.print_gb_doctor_log(mem);
-        }
-
         log::trace!("begin cycle - {}, {}", self.regs, self.ime);
 
         let interrupt_cycles = self.handle_interrupts(mem);
@@ -67,19 +59,13 @@ impl Cpu {
     }
 
     fn handle_interrupts(&mut self, mem: &mut Memory) -> usize {
-        let triggered = mem.io_regs.interrupt_flag & mem.interrupt_enable;
-        if triggered == 0 {
-            return 0;
-        }
-
         let mut cycles_taken = 0;
 
-        let index = triggered.trailing_zeros();
-        if let Some(int) = Interrupt::from_index(index) {
+        if let Some(int) = mem.interrupts.next_triggered_interrupt() {
             if self.ime.enabled() {
                 log::debug!("interrupt triggered {int} and calling handler");
 
-                mem.flag_interrupt(int, false);
+                mem.interrupts.flag_interrupt(int, false);
                 self.ime.disable(0);
 
                 self.stack_push(mem, self.regs.pc);
@@ -96,8 +82,6 @@ impl Cpu {
                 self.halted = false;
                 cycles_taken += 1;
             }
-        } else {
-            log::warn!("invalid interrupt triggered (bit {index}) - ignoring");
         }
 
         cycles_taken
@@ -985,25 +969,5 @@ impl Cpu {
         let x = mem.read8(self.regs.hl());
         let result = f(&mut self.regs.flags, x);
         mem.write8(self.regs.hl(), result);
-    }
-
-    fn print_gb_doctor_log(&self, mem: &Memory) {
-        println!(
-            "A:{:02X} F:{:02X} B:{:02X} C:{:02X} D:{:02X} E:{:02X} H:{:02X} L:{:02X} SP:{:04X} PC:{:04X} PCMEM:{:02X},{:02X},{:02X},{:02X}",
-            self.regs.a,
-            self.regs.flags.0,
-            self.regs.b,
-            self.regs.c,
-            self.regs.d,
-            self.regs.e,
-            self.regs.h,
-            self.regs.l,
-            self.regs.sp,
-            self.regs.pc,
-            mem.read8(self.regs.pc),
-            mem.read8(self.regs.pc+1),
-            mem.read8(self.regs.pc+2),
-            mem.read8(self.regs.pc+3),
-        );
     }
 }

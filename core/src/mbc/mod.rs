@@ -1,6 +1,6 @@
 mod rom_only;
 
-pub use rom_only::RomOnly;
+use rom_only::RomOnly;
 
 use std::path::Path;
 use std::{fs, io};

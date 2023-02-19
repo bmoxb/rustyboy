@@ -1,41 +1,45 @@
 use crate::bits::get_bit;
 use crate::cpu;
-use crate::memory::{InputOutputRegisters, Memory};
+use crate::interrupts::{Interrupt, Interrupts};
 
 #[derive(Default)]
 pub struct Timer {
+    pub divider: u8,
+    pub counter: u8,
+    pub modulo: u8,
+    pub control: u8,
     timer_cycles: usize,
     divider_cycles: usize,
 }
 
 impl Timer {
-    pub fn update(&mut self, mem: &mut Memory, cpu_cycles: usize) {
+    pub fn update(&mut self, interrupts: &mut Interrupts, cpu_cycles: usize) {
         self.divider_cycles += cpu_cycles;
 
         if self.divider_cycles >= 256 {
             self.divider_cycles -= 256;
-            mem.io_regs.divider = mem.io_regs.divider.wrapping_add(1);
+            self.divider = self.divider.wrapping_add(1);
         }
 
-        if self.enabled(&mem.io_regs) {
+        if self.enabled() {
             self.timer_cycles += cpu_cycles;
 
-            let frequency = self.timer_controller_frequency(&mem.io_regs);
+            let frequency = self.timer_controller_frequency();
             let required_cycles = cpu::CLOCK_SPEED / frequency;
 
             if self.timer_cycles >= required_cycles {
-                self.increase_timer(mem);
+                self.increase_timer(interrupts);
                 self.timer_cycles -= required_cycles;
             }
         }
     }
 
-    fn enabled(&self, regs: &InputOutputRegisters) -> bool {
-        get_bit(regs.timer_control, 2)
+    fn enabled(&self) -> bool {
+        get_bit(self.control, 2)
     }
 
-    fn timer_controller_frequency(&self, regs: &InputOutputRegisters) -> usize {
-        match regs.timer_control & 0b11 {
+    fn timer_controller_frequency(&self) -> usize {
+        match self.control & 0b11 {
             0 => 4096,
             1 => 262144,
             2 => 65536,
@@ -44,12 +48,12 @@ impl Timer {
         }
     }
 
-    fn increase_timer(&self, mem: &mut Memory) {
-        if mem.io_regs.timer_counter == u8::MAX {
-            mem.io_regs.timer_counter = mem.io_regs.timer_modulo;
-            mem.flag_interrupt(cpu::Interrupt::Timer, true);
+    fn increase_timer(&mut self, interrupts: &mut Interrupts) {
+        if self.counter == u8::MAX {
+            self.counter = self.modulo;
+            interrupts.flag_interrupt(Interrupt::Timer, true);
         } else {
-            mem.io_regs.timer_counter += 1;
+            self.counter += 1;
         }
     }
 }
@@ -57,29 +61,24 @@ impl Timer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mbc;
+    use crate::interrupts::Interrupts;
 
     #[test]
     fn divider() {
         let mut t = Timer::default();
-        let mut mem = Memory::new(Box::new(mbc::RomOnly::new(&[])));
+        let mut ints = Interrupts::default();
 
         // increment divider over time
-        t.update(&mut mem, 256);
-        assert_eq!(mem.io_regs.divider, 1);
-        t.update(&mut mem, 300);
-        assert_eq!(mem.io_regs.divider, 2);
-        t.update(&mut mem, 230);
-        assert_eq!(mem.io_regs.divider, 3);
+        t.update(&mut ints, 256);
+        assert_eq!(t.divider, 1);
+        t.update(&mut ints, 300);
+        assert_eq!(t.divider, 2);
+        t.update(&mut ints, 230);
+        assert_eq!(t.divider, 3);
 
         // ensure divider wraps around to 0
-        mem.io_regs.divider = 255;
-        t.update(&mut mem, 300);
-        assert_eq!(mem.io_regs.divider, 0);
-
-        // ensure divider register is reset when written to
-        mem.io_regs.divider = 10;
-        mem.write8(0xFF04, 25);
-        assert_eq!(mem.io_regs.divider, 0);
+        t.divider = 255;
+        t.update(&mut ints, 300);
+        assert_eq!(t.divider, 0);
     }
 }
