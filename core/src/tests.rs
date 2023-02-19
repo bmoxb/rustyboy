@@ -10,7 +10,7 @@ macro_rules! test_rom {
 
             let rom = include_bytes!(concat!(
                 env!("CARGO_MANIFEST_DIR"),
-                "/roms/cpu_instrs/individual/",
+                "/../gb-test-roms/cpu_instrs/individual/",
                 $file
             ));
             let mbc = mbc::from_rom_data(rom);

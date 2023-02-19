@@ -1,6 +1,6 @@
 use crate::bits::get_bit;
-use crate::gb::cpu;
-use crate::gb::memory::{InputOutputRegisters, Memory};
+use crate::cpu;
+use crate::memory::{InputOutputRegisters, Memory};
 
 #[derive(Default)]
 pub struct Timer {
@@ -57,7 +57,7 @@ impl Timer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gb::mbc;
+    use crate::mbc;
 
     #[test]
     fn divider() {

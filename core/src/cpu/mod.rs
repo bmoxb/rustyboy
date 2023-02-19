@@ -5,7 +5,7 @@ mod opcode;
 mod registers;
 
 use crate::bits::modify_bit;
-use crate::gb::memory::Memory;
+use crate::memory::Memory;
 
 use ime::InterruptMasterEnable;
 pub use interrupts::Interrupt;

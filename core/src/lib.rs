@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests;
 
+mod bits;
 mod cpu;
 pub mod mbc;
 mod memory;
