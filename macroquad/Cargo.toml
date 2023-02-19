@@ -1,0 +1,9 @@
+[package]
+name = "rustyboy_macroquad"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rustyboy_core = { path = "../core" }
+env_logger = "0.10.0"
+macroquad = "0.3.25"
