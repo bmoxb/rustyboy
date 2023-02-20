@@ -10,8 +10,6 @@ use ime::InterruptMasterEnable;
 use opcode::Opcode;
 use registers::{Flags, Registers};
 
-pub const CLOCK_SPEED: usize = 4194304;
-
 pub struct Cpu {
     pub regs: Registers,
     halted: bool,

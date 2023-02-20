@@ -13,6 +13,7 @@ impl Interrupts {
         self.flag = modify_bit(self.flag, int.bit(), value);
     }
 
+    #[allow(dead_code)]
     pub fn is_flagged(&self, int: Interrupt) -> bool {
         get_bit(self.flag, int.bit())
     }
