@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::bits::modify_bit;
+use crate::bits::{get_bit, modify_bit};
 
 #[derive(Default)]
 pub struct Interrupts {
@@ -9,8 +9,12 @@ pub struct Interrupts {
 }
 
 impl Interrupts {
-    pub fn flag_interrupt(&mut self, int: Interrupt, value: bool) {
+    pub fn flag(&mut self, int: Interrupt, value: bool) {
         self.flag = modify_bit(self.flag, int.bit(), value);
+    }
+
+    pub fn is_flagged(&self, int: Interrupt) -> bool {
+        get_bit(self.flag, int.bit())
     }
 
     pub fn next_triggered_interrupt(&self) -> Option<Interrupt> {

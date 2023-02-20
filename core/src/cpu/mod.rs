@@ -65,7 +65,7 @@ impl Cpu {
             if self.ime.enabled() {
                 log::debug!("interrupt triggered {int} and calling handler");
 
-                mem.interrupts.flag_interrupt(int, false);
+                mem.interrupts.flag(int, false);
                 self.ime.disable(0);
 
                 self.stack_push(mem, self.regs.pc);
