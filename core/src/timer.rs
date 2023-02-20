@@ -1,7 +1,7 @@
 use crate::bits::get_bit;
 use crate::interrupts::{Interrupt, Interrupts};
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct Timer {
     pub divider: u8,
     pub counter: u8,
@@ -12,6 +12,17 @@ pub struct Timer {
 }
 
 impl Timer {
+    pub fn new() -> Self {
+        Timer {
+            divider: 0x18,
+            counter: 0,
+            modulo: 0,
+            control: 0xF8,
+            timer_cycles: 0,
+            divider_cycles: 0,
+        }
+    }
+
     pub fn update(&mut self, interrupts: &mut Interrupts, cpu_cycles: usize) {
         self.divider_cycles += cpu_cycles;
 
@@ -63,8 +74,10 @@ mod tests {
 
     #[test]
     fn divider() {
-        let mut t = Timer::default();
-        let mut ints = Interrupts::default();
+        let mut t = Timer::new();
+        t.divider = 0;
+
+        let mut ints = Interrupts::new();
 
         // increment divider over time
         t.update(&mut ints, 64);
@@ -84,15 +97,11 @@ mod tests {
 
     #[test]
     fn counter() {
-        let mut t = Timer {
-            control: 0b101, // enable timer, 4 cycles
-            ..Default::default()
-        };
+        let mut t = Timer::new();
+        t.control = 0b101; // enable timer, 4 cycles
 
-        let mut ints = Interrupts {
-            enable: 0xFF, // enable all
-            ..Default::default()
-        };
+        let mut ints = Interrupts::new();
+        ints.enable = 0xFF; // enable all
 
         // ensure interrupt occurs and counter wraps around to modulo
 

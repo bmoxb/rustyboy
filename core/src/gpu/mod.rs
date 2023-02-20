@@ -19,13 +19,13 @@ impl Gpu {
     pub fn new() -> Self {
         Gpu {
             vram: [0; VRAM_SIZE],
-            lcd_control: 0,
-            lcd_status: 0,
+            lcd_control: 0x91,
+            lcd_status: 0x81,
             viewport_y: 0,
             viewport_x: 0,
-            lcd_y: 0,
+            lcd_y: 0x91,
             ly_compare: 0,
-            bg_palette_data: 0,
+            bg_palette_data: 0xFC,
             obj_palette_0_data: 0,
             obj_palette_1_data: 0,
             window_y: 0,
