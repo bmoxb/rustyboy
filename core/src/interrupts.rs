@@ -2,13 +2,18 @@ use std::fmt;
 
 use crate::bits::{get_bit, modify_bit};
 
-#[derive(Default)]
 pub struct Interrupts {
     pub enable: u8,
     pub flag: u8,
 }
 
 impl Interrupts {
+    pub fn new() -> Self {
+        Interrupts {
+            enable: 0,
+            flag: 0xE1,
+        }
+    }
     pub fn flag(&mut self, int: Interrupt, value: bool) {
         self.flag = modify_bit(self.flag, int.bit(), value);
     }

@@ -24,9 +24,9 @@ impl Memory {
         Memory {
             mbc,
             gpu: Gpu::new(),
-            timer: Timer::default(),
-            interrupts: Interrupts::default(),
-            serial: SerialTransfer::default(),
+            timer: Timer::new(),
+            interrupts: Interrupts::new(),
+            serial: SerialTransfer::new(),
             joypad: Joypad::new(),
             wram: [0; WRAM_SIZE],
             hram: [0; HRAM_SIZE],
