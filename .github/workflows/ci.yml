@@ -20,6 +20,7 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     steps:
+      - run: sudo apt install -y pkg-config libx11-dev libxi-dev libgl1-mesa-dev libasound2-dev
       - uses: actions/checkout@v2
         with:
           submodules: recursive
