@@ -26,12 +26,8 @@ macro_rules! test_rom {
 
                 cycles_since_last_log += 1;
 
-                if gb.mem.serial.control == 0x81 {
-                    gb.mem.serial.control = 0;
-
-                    let c = gb.mem.serial.data as char;
-                    logged.push(c);
-
+                if let Some(b) = gb.take_serial_byte() {
+                    logged.push(b as char);
                     cycles_since_last_log = 0;
                 }
             }

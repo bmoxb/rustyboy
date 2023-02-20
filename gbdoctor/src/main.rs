@@ -15,6 +15,10 @@ fn main() {
 
         loop {
             gb.update(0.0);
+
+            if let Some(b) = gb.take_serial_byte() {
+                print!("{}", b as char);
+            }
         }
     } else {
         println!("expected ROM path and output log file path as CLI arguments");

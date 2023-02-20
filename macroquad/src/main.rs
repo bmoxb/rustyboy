@@ -24,6 +24,10 @@ async fn main() {
         let delta = quad::get_frame_time();
         gb.update(delta);
 
+        if let Some(b) = gb.take_serial_byte() {
+            print!("{}", b as char);
+        }
+
         quad::next_frame().await
     }
 }

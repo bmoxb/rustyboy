@@ -32,6 +32,7 @@ impl Memory {
 
     pub fn update(&mut self, cpu_cycles: usize) {
         self.timer.update(&mut self.interrupts, cpu_cycles);
+        self.serial.update();
         // TODO
     }
 

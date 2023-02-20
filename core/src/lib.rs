@@ -56,4 +56,8 @@ impl GameBoy {
         let cpu_cycles = self.cpu.cycle(&mut self.mem);
         self.mem.update(cpu_cycles);
     }
+
+    pub fn take_serial_byte(&mut self) -> Option<u8> {
+        self.mem.serial.take_byte()
+    }
 }
