@@ -62,7 +62,19 @@ impl Memory {
             0xFF06 => self.timer.modulo,
             0xFF07 => self.timer.control,
             0xFF0F => self.interrupts.flag,
-            0xFF10..=0xFF4B => 0, // TODO: audio and visuals
+            0xFF10..=0xFF3F => 0, // TODO: audio
+            0xFF40 => self.gpu.lcd_control,
+            0xFF41 => self.gpu.lcd_status,
+            0xFF42 => self.gpu.viewport_y,
+            0xFF43 => self.gpu.viewport_x,
+            0xFF44 => self.gpu.lcd_y,
+            0xFF45 => self.gpu.ly_compare,
+            0xFF46 => 0, // TODO
+            0xFF47 => self.gpu.bg_palette_data,
+            0xFF48 => self.gpu.obj_palette_0_data,
+            0xFF49 => self.gpu.obj_palette_1_data,
+            0xFF4A => self.gpu.window_y,
+            0xFF4B => self.gpu.window_x,
             0xFF80..=0xFFFE => self.hram[(addr - 0xFF80) as usize],
             0xFFFF => self.interrupts.enable,
             _ => unimplemented!(),
@@ -102,7 +114,19 @@ impl Memory {
             0xFF06 => self.timer.modulo = value,
             0xFF07 => self.timer.control = value,
             0xFF0F => self.interrupts.flag = value,
-            0xFF10..=0xFF4B => {} // TODO: audio and visuals
+            0xFF10..=0xFF3F => {} // TODO: audio
+            0xFF40 => self.gpu.lcd_control = value,
+            0xFF41 => self.gpu.lcd_status = value,
+            0xFF42 => self.gpu.viewport_y = value,
+            0xFF43 => self.gpu.viewport_x = value,
+            0xFF44 => {}
+            0xFF45 => self.gpu.ly_compare = value,
+            0xFF46 => {} // TODO
+            0xFF47 => self.gpu.bg_palette_data = value,
+            0xFF48 => self.gpu.obj_palette_0_data = value,
+            0xFF49 => self.gpu.obj_palette_1_data = value,
+            0xFF4A => self.gpu.window_y = value,
+            0xFF4B => self.gpu.window_x = value,
             0xFF80..=0xFFFE => self.hram[(addr - 0xFF80) as usize] = value,
             0xFFFF => self.interrupts.enable = value,
             _ => unimplemented!(),
