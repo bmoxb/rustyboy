@@ -48,9 +48,9 @@ As instructions are executed on the CPU, the number of cycles taken to execute e
   * [x] Interrupt handling
   * [x] Pass all Blargg test ROMs
 * [x] Memory map
-* [ ] Timer
+* [x] Timer
 * [ ] Cartridges
-  * [ ] No MBC
+  * [x] No MBC
   * [ ] MBC-1
   * [ ] MBC-3
   * [ ] MBC-5
