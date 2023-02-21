@@ -1,19 +1,27 @@
 #[cfg(not(target_arch = "wasm32"))]
 mod desktop;
+#[cfg(not(target_arch = "wasm32"))]
+use desktop as platform;
+
 #[cfg(target_arch = "wasm32")]
 mod web;
+#[cfg(target_arch = "wasm32")]
+use web as platform;
+
+use rustyboy_core::GameBoy;
 
 use macroquad::prelude as quad;
 
 #[macroquad::main("rustyboy")]
 async fn main() {
-    #[cfg(not(target_arch = "wasm32"))]
-    let mbc = desktop::init();
-    #[cfg(target_arch = "wasm32")]
-    let mbc = web::init();
+    if let Some(mbc) = platform::init() {
+        let gb = GameBoy::new(mbc);
 
-    let mut gb = rustyboy_core::GameBoy::new(mbc);
+        game(gb).await;
+    }
+}
 
+async fn game(mut gb: GameBoy) {
     quad::set_camera(&quad::Camera2D::default());
 
     loop {
