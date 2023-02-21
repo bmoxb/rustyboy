@@ -1,24 +1,20 @@
-use std::env;
+#[cfg(not(target_arch = "wasm32"))]
+mod desktop;
+#[cfg(target_arch = "wasm32")]
+mod web;
 
 use macroquad::prelude as quad;
 
 #[macroquad::main("rustyboy")]
 async fn main() {
-    env_logger::init();
-
-    let args: Vec<String> = env::args().collect();
-    let path = args.last().unwrap();
-
-    let mbc = rustyboy_core::mbc::from_rom_file(path).unwrap();
-
-    println!(
-        "ROM Title: {}\nMBC ROM size: {:#X} bytes\nMBC RAM size: {:#X} bytes",
-        mbc.game_title(),
-        mbc.rom_size(),
-        mbc.ram_size()
-    );
+    #[cfg(not(target_arch = "wasm32"))]
+    let mbc = desktop::init();
+    #[cfg(target_arch = "wasm32")]
+    let mbc = web::init();
 
     let mut gb = rustyboy_core::GameBoy::new(mbc);
+
+    quad::set_camera(&quad::Camera2D::default());
 
     loop {
         let delta = quad::get_frame_time();
@@ -27,6 +23,8 @@ async fn main() {
         if let Some(b) = gb.take_serial_byte() {
             print!("{}", b as char);
         }
+
+        quad::draw_circle(0.0, 0.0, 1.0, quad::BLUE);
 
         quad::next_frame().await
     }
