@@ -1,19 +1,39 @@
-use std::env;
+use std::path::PathBuf;
 
-pub fn init() -> Box<dyn rustyboy_core::mbc::MemoryBankController> {
+use rustyboy_core::mbc;
+
+use clap::Parser;
+
+#[derive(Parser, Debug)]
+#[command(version)]
+struct Args {
+    #[arg(help = "The ROM file to load and execute")]
+    rom_path: PathBuf,
+}
+
+pub fn init() -> Option<Box<dyn mbc::MemoryBankController>> {
     env_logger::init();
 
-    let args: Vec<String> = env::args().collect();
-    let path = args.last().unwrap();
+    let args = Args::parse();
 
-    let mbc = rustyboy_core::mbc::from_rom_file(path).unwrap();
+    match mbc::from_rom_file(&args.rom_path) {
+        Ok(mbc) => {
+            println!(
+                "ROM Title: {}\nMBC ROM size: {:#X} bytes\nMBC RAM size: {:#X} bytes",
+                mbc.game_title(),
+                mbc.rom_size(),
+                mbc.ram_size()
+            );
 
-    println!(
-        "ROM Title: {}\nMBC ROM size: {:#X} bytes\nMBC RAM size: {:#X} bytes",
-        mbc.game_title(),
-        mbc.rom_size(),
-        mbc.ram_size()
-    );
-
-    mbc
+            Some(mbc)
+        }
+        Err(e) => {
+            eprintln!(
+                "ROM at \"{}\" could not be loaded: {}",
+                args.rom_path.display(),
+                e
+            );
+            None
+        }
+    }
 }
