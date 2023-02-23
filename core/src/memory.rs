@@ -63,8 +63,8 @@ impl Memory {
             0xFF07 => self.timer.control,
             0xFF0F => self.interrupts.flag,
             0xFF10..=0xFF3F => 0, // TODO: audio
-            0xFF40 => self.gpu.lcd_control,
-            0xFF41 => self.gpu.lcd_status,
+            0xFF40 => self.gpu.lcd_control.0,
+            0xFF41 => self.gpu.lcd_status.0,
             0xFF42 => self.gpu.viewport_y,
             0xFF43 => self.gpu.viewport_x,
             0xFF44 => self.gpu.lcd_y,
@@ -115,8 +115,8 @@ impl Memory {
             0xFF07 => self.timer.control = value,
             0xFF0F => self.interrupts.flag = value,
             0xFF10..=0xFF3F => {} // TODO: audio
-            0xFF40 => self.gpu.lcd_control = value,
-            0xFF41 => self.gpu.lcd_status = value,
+            0xFF40 => self.gpu.lcd_control.0 = value,
+            0xFF41 => self.gpu.lcd_status.0 = value,
             0xFF42 => self.gpu.viewport_y = value,
             0xFF43 => self.gpu.viewport_x = value,
             0xFF44 => {}
