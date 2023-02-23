@@ -1,4 +1,4 @@
-use crate::bits::get_bit;
+use crate::bits::{get_bit, get_bits};
 use crate::interrupts::{Interrupt, Interrupts};
 
 #[derive(Debug)]
@@ -48,7 +48,7 @@ impl Timer {
     }
 
     fn required_cycles(&self) -> usize {
-        match self.control & 0b11 {
+        match get_bits(self.control, 0, 2) {
             0 => 256,
             1 => 4,
             2 => 16,

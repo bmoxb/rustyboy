@@ -1,6 +1,7 @@
 use std::fmt;
 
-use crate::bits::{get_bit, modify_bit, toggle_bit};
+use crate::bits::bit_accessors;
+use crate::register_type;
 
 macro_rules! reg_pair {
     ($get:ident, $set:ident, $self:ident, $x:ident, $y:ident) => {
@@ -135,25 +136,7 @@ impl fmt::Display for Registers {
     }
 }
 
-macro_rules! flag {
-    ($get:ident, $set:ident, $toggle:ident, $bit:literal) => {
-        pub fn $get(&self) -> bool {
-            get_bit(self.0, $bit)
-        }
-
-        pub fn $set(&mut self, value: bool) {
-            self.0 = modify_bit(self.0, $bit, value);
-        }
-
-        #[allow(unused)]
-        pub fn $toggle(&mut self) {
-            self.0 = toggle_bit(self.0, $bit);
-        }
-    };
-}
-
-#[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
-pub struct Flags(pub u8);
+register_type!(Flags);
 
 impl Flags {
     pub fn new(c: bool, h: bool, n: bool, z: bool) -> Self {
@@ -165,10 +148,10 @@ impl Flags {
         f
     }
 
-    flag!(carry, set_carry, toggle_carry, 4);
-    flag!(half_carry, set_half_carry, toggle_half_carry, 5);
-    flag!(subtraction, set_subtraction, toggle_subtraction, 6);
-    flag!(zero, set_zero, toggle_zero, 7);
+    bit_accessors!(4, carry, set_carry, toggle_carry);
+    bit_accessors!(5, half_carry, set_half_carry);
+    bit_accessors!(6, subtraction, set_subtraction);
+    bit_accessors!(7, zero, set_zero);
 }
 
 impl fmt::Display for Flags {
@@ -231,7 +214,7 @@ mod tests {
         assert_eq!(flags, Flags::new(false, true, false, true));
 
         flags.toggle_carry();
-        flags.toggle_half_carry();
+        flags.set_half_carry(false);
         assert_eq!(flags, Flags::new(true, false, false, true));
     }
 }

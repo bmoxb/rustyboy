@@ -67,3 +67,11 @@ impl GameBoy {
         self.mem.serial.take_byte()
     }
 }
+
+macro_rules! register_type {
+    ($name:ident) => {
+        #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
+        pub struct $name(pub u8);
+    };
+}
+pub(crate) use register_type;
