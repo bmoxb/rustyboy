@@ -9,7 +9,7 @@ fn main() {
         let mut gb = rustyboy_core::GameBoy::new(mbc);
 
         let file = File::create(log_path).unwrap();
-        gb.gb_doctor_logging = Some(Box::new(file));
+        gb.enable_gb_doctor_logging(Box::new(file));
 
         println!("beginning execution - press Ctrl-C to stop");
 

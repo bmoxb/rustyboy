@@ -8,18 +8,23 @@ mod interrupts;
 mod joypad;
 pub mod mbc;
 mod memory;
+pub mod screen;
 mod serial;
 mod timer;
+
+use std::io::Write;
 
 use cpu::Cpu;
 use joypad::Joypad;
 use mbc::MemoryBankController;
 use memory::Memory;
+use screen::Screen;
 
 pub struct GameBoy {
     cpu: Cpu,
     mem: Memory,
-    pub gb_doctor_logging: Option<Box<dyn std::io::Write>>,
+    screen: Screen,
+    gb_doctor_logging: Option<Box<dyn Write>>,
 }
 
 impl GameBoy {
@@ -27,6 +32,7 @@ impl GameBoy {
         GameBoy {
             cpu: Cpu::new(),
             mem: Memory::new(mbc),
+            screen: Screen::new(),
             gb_doctor_logging: None,
         }
     }
@@ -63,8 +69,16 @@ impl GameBoy {
         &mut self.mem.joypad
     }
 
+    pub fn enable_gb_doctor_logging(&mut self, destination: Box<dyn Write>) {
+        self.gb_doctor_logging = Some(destination)
+    }
+
     pub fn take_serial_byte(&mut self) -> Option<u8> {
         self.mem.serial.take_byte()
+    }
+
+    pub fn screen_ref(&self) -> &Screen {
+        &self.screen
     }
 }
 
