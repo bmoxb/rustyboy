@@ -15,9 +15,9 @@ macro_rules! test_rom {
             ));
             let mbc = mbc::from_rom_data(rom);
 
-            let display = Box::new(display::StubDisplay);
+            let screen = Box::new(screen::StubScreen);
 
-            let mut gb = GameBoy::new(mbc, display);
+            let mut gb = GameBoy::new(mbc, screen);
 
             let mut logged = String::new();
             let mut cycles_since_last_log = 0;

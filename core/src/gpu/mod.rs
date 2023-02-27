@@ -1,6 +1,6 @@
 use crate::bits::{bit_accessors, get_bits, modify_bits};
 use crate::cycles::TCycles;
-use crate::Display;
+use crate::screen::Screen;
 
 const VRAM_SIZE: usize = 0x2000;
 
@@ -10,7 +10,7 @@ const SEARCHING_OAM_PERIOD: TCycles = TCycles(80);
 const TRANSFERRING_DATA_PERIOD: TCycles = TCycles(172);
 
 pub struct Gpu {
-    display: Box<dyn Display>,
+    screen: Box<dyn Screen>,
     pub vram: [u8; VRAM_SIZE],
     pub lcd_control: LcdControlRegister,
     pub lcd_status: LcdStatusRegister,
@@ -28,9 +28,9 @@ pub struct Gpu {
 }
 
 impl Gpu {
-    pub fn new(display: Box<dyn Display>) -> Self {
+    pub fn new(screen: Box<dyn Screen>) -> Self {
         Gpu {
-            display,
+            screen,
             vram: [0; VRAM_SIZE],
             lcd_control: LcdControlRegister(0x91),
             lcd_status: LcdStatusRegister(0x81),
@@ -60,7 +60,7 @@ impl Gpu {
                     self.scanline += 1;
 
                     let next_status = if self.scanline == 143 {
-                        self.display.swap_buffers();
+                        self.screen.swap_buffers();
                         LcdStatus::VBlank
                     } else {
                         LcdStatus::SearchingOAM
@@ -100,7 +100,7 @@ impl Gpu {
                     self.clock -= TRANSFERRING_DATA_PERIOD;
                     self.lcd_status.set_status(LcdStatus::HBlank);
 
-                    self.display.write_scanline();
+                    self.screen.write_scanline();
                 }
             }
         }

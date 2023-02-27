@@ -1,4 +1,4 @@
-mod display;
+mod screen;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod desktop;
@@ -17,8 +17,8 @@ use macroquad::prelude as quad;
 #[macroquad::main("rustyboy")]
 async fn main() {
     if let Some(mbc) = platform::init() {
-        let display = Box::new(display::MacroquadDisplay);
-        let gb = GameBoy::new(mbc, display);
+        let screen = Box::new(screen::MacroquadScreen);
+        let gb = GameBoy::new(mbc, screen);
 
         game(gb).await;
     }

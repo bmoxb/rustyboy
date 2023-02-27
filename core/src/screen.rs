@@ -1,11 +1,11 @@
-pub trait Display {
+pub trait Screen {
     fn write_scanline(&mut self);
     fn swap_buffers(&mut self);
 }
 
-pub struct StubDisplay;
+pub struct StubScreen;
 
-impl Display for StubDisplay {
+impl Screen for StubScreen {
     fn write_scanline(&mut self) {}
     fn swap_buffers(&mut self) {}
 }
