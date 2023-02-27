@@ -1,3 +1,7 @@
+mod palettes;
+
+use palettes::BackgroundPalette;
+
 use crate::bits::{bit_accessors, get_bits, modify_bits};
 use crate::cycles::TCycles;
 use crate::interrupts::{Interrupt, Interrupts};
@@ -19,7 +23,7 @@ pub struct Gpu {
     pub viewport_x: u8,
     pub lcd_y: u8,
     pub ly_compare: u8,
-    pub bg_palette_data: u8,
+    pub bg_palette_data: BackgroundPalette,
     pub obj_palette_0_data: u8,
     pub obj_palette_1_data: u8,
     pub window_y: u8,
@@ -38,7 +42,7 @@ impl Gpu {
             viewport_x: 0,
             lcd_y: 0x91,
             ly_compare: 0,
-            bg_palette_data: 0xFC,
+            bg_palette_data: BackgroundPalette(0xFC),
             obj_palette_0_data: 0,
             obj_palette_1_data: 0,
             window_y: 0,
