@@ -17,6 +17,16 @@ pub fn get_bit(value: u8, bit: u8) -> bool {
     (value & mask) != 0
 }
 
+pub fn modify_bits(mut value: u8, from_inclusive: u8, to_exclusive: u8, set_to: u8) -> u8 {
+    debug_assert!(from_inclusive <= to_exclusive);
+    // TODO: there's definitely a more efficient way of doing this
+    for i in from_inclusive..to_exclusive {
+        let bit = get_bit(set_to, i - from_inclusive);
+        value = modify_bit(value, i, bit);
+    }
+    value
+}
+
 pub fn get_bits(value: u8, from_inclusive: u8, to_exclusive: u8) -> u8 {
     debug_assert!(from_inclusive <= to_exclusive);
     let mask = 2_u8.pow((to_exclusive - from_inclusive) as u32) - 1;
@@ -54,5 +64,11 @@ mod tests {
     fn get_bits() {
         assert_eq!(super::get_bits(0b11100, 1, 4), 0b110);
         assert_eq!(super::get_bits(1, 0, 0), 0);
+    }
+
+    #[test]
+    fn modify_bits() {
+        assert_eq!(super::modify_bits(0, 1, 4, 0b111), 0b1110);
+        assert_eq!(super::modify_bits(0xFF, 2, 7, 0b10101), 0b11010111);
     }
 }

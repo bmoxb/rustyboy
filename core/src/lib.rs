@@ -3,36 +3,34 @@ mod tests;
 
 mod bits;
 mod cpu;
+pub mod display;
 mod gpu;
 mod interrupts;
 mod joypad;
 pub mod mbc;
 mod memory;
-pub mod screen;
 mod serial;
 mod timer;
 
 use std::io::Write;
 
 use cpu::Cpu;
+use display::Display;
 use joypad::Joypad;
 use mbc::MemoryBankController;
 use memory::Memory;
-use screen::Screen;
 
 pub struct GameBoy {
     cpu: Cpu,
     mem: Memory,
-    screen: Screen,
     gb_doctor_logging: Option<Box<dyn Write>>,
 }
 
 impl GameBoy {
-    pub fn new(mbc: Box<dyn MemoryBankController>) -> Self {
+    pub fn new(mbc: Box<dyn MemoryBankController>, display: Box<dyn Display>) -> Self {
         GameBoy {
             cpu: Cpu::new(),
-            mem: Memory::new(mbc),
-            screen: Screen::new(),
+            mem: Memory::new(mbc, display),
             gb_doctor_logging: None,
         }
     }
@@ -75,10 +73,6 @@ impl GameBoy {
 
     pub fn take_serial_byte(&mut self) -> Option<u8> {
         self.mem.serial.take_byte()
-    }
-
-    pub fn screen_ref(&self) -> &Screen {
-        &self.screen
     }
 }
 

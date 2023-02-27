@@ -4,6 +4,7 @@ use crate::joypad::Joypad;
 use crate::mbc::MemoryBankController;
 use crate::serial::SerialTransfer;
 use crate::timer::Timer;
+use crate::Display;
 
 const WRAM_SIZE: usize = 0x2000;
 const HRAM_SIZE: usize = 0x7F;
@@ -20,10 +21,10 @@ pub struct Memory {
 }
 
 impl Memory {
-    pub fn new(mbc: Box<dyn MemoryBankController>) -> Self {
+    pub fn new(mbc: Box<dyn MemoryBankController>, display: Box<dyn Display>) -> Self {
         Memory {
             mbc,
-            gpu: Gpu::new(),
+            gpu: Gpu::new(display),
             timer: Timer::new(),
             interrupts: Interrupts::new(),
             serial: SerialTransfer::new(),
@@ -34,9 +35,11 @@ impl Memory {
     }
 
     pub fn update(&mut self, cpu_cycles: usize) {
+        let t_cycles = cpu_cycles * 4;
+
         self.timer.update(&mut self.interrupts, cpu_cycles);
         self.serial.update();
-        // TODO
+        self.gpu.update(t_cycles);
     }
 
     pub fn read8(&self, addr: u16) -> u8 {
