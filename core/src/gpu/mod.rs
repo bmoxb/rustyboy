@@ -24,7 +24,6 @@ pub struct Gpu {
     pub window_y: u8,
     pub window_x: u8,
     clock: TCycles,
-    scanline: u8,
 }
 
 impl Gpu {
@@ -44,7 +43,6 @@ impl Gpu {
             window_y: 0,
             window_x: 0,
             clock: TCycles(0),
-            scanline: 0,
         }
     }
 
@@ -57,9 +55,9 @@ impl Gpu {
                 if self.clock >= HBLANK_PERIOD {
                     self.clock -= HBLANK_PERIOD;
 
-                    self.scanline += 1;
+                    self.lcd_y += 1;
 
-                    let next_status = if self.scanline == 143 {
+                    let next_status = if self.lcd_y == 143 {
                         self.screen.swap_buffers();
                         LcdStatus::VBlank
                     } else {
@@ -75,11 +73,11 @@ impl Gpu {
                 if self.clock >= VBLANK_PERIOD {
                     self.clock -= VBLANK_PERIOD;
 
-                    self.scanline += 1;
+                    self.lcd_y += 1;
 
                     // if 10 lines done since HBlank (i.e., 10 * VBLANK_PERIOD ticks elapsed)
-                    if self.scanline > 153 {
-                        self.scanline = 0;
+                    if self.lcd_y > 153 {
+                        self.lcd_y = 0;
                         self.lcd_status.set_status(LcdStatus::SearchingOAM);
                     }
                 }
