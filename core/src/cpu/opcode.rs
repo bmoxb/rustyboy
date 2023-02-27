@@ -1,8 +1,9 @@
-use std::fmt;
-
 use crate::bits::get_bits;
 
-#[derive(Clone, Copy)]
+use derive_more::Display;
+
+#[derive(Clone, Copy, Display)]
+#[display(fmt = "{0:#04X} ({0:#010b})", _0)]
 pub struct Opcode(pub u8);
 
 impl Opcode {
@@ -26,11 +27,5 @@ impl Opcode {
     // conditional JP, JR, CALL, or RET instruction.
     pub fn ff(&self) -> u8 {
         get_bits(self.0, 3, 5)
-    }
-}
-
-impl fmt::Display for Opcode {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{0:#04X} ({0:#010b})", self.0)
     }
 }

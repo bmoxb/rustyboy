@@ -1,4 +1,4 @@
-use std::fmt;
+use derive_more::Display;
 
 use crate::bits::{get_bit, modify_bit};
 
@@ -34,9 +34,11 @@ impl Interrupts {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Display)]
+#[display(fmt = "{} interrupt")]
 pub enum Interrupt {
     VBlank,
+    #[display(fmt = "LCD STAT")]
     LcdStat,
     Timer,
     Serial,
@@ -64,17 +66,5 @@ impl Interrupt {
 
     pub fn bit(&self) -> u8 {
         *self as u8
-    }
-}
-
-impl fmt::Display for Interrupt {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{:?} (bit {}, INT 0x{:X})",
-            self,
-            self.bit(),
-            self.handler_address()
-        )
     }
 }

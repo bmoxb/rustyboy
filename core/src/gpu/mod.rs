@@ -1,6 +1,5 @@
 use crate::bits::{bit_accessors, get_bits, modify_bits};
 use crate::cycles::TCycles;
-use crate::register_type;
 use crate::Display;
 
 const VRAM_SIZE: usize = 0x2000;
@@ -108,7 +107,8 @@ impl Gpu {
     }
 }
 
-register_type!(LcdControlRegister);
+#[derive(Clone, Copy)]
+pub struct LcdControlRegister(pub u8);
 
 #[allow(dead_code)]
 impl LcdControlRegister {
@@ -122,7 +122,8 @@ impl LcdControlRegister {
     bit_accessors!(7, lcd_enable);
 }
 
-register_type!(LcdStatusRegister);
+#[derive(Clone, Copy)]
+pub struct LcdStatusRegister(pub u8);
 
 #[allow(dead_code)]
 impl LcdStatusRegister {

@@ -62,7 +62,7 @@ impl Cpu {
 
         if let Some(int) = mem.interrupts.next_triggered_interrupt() {
             if self.ime.enabled() {
-                log::debug!("interrupt triggered {int} and calling handler");
+                log::debug!("{int} triggered and calling handler");
 
                 mem.interrupts.flag(int, false);
                 self.ime.disable(0);
