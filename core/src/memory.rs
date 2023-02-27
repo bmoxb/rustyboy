@@ -71,8 +71,8 @@ impl Memory {
             0xFF43 => self.gpu.viewport_x,
             0xFF44 => self.gpu.lcd_y,
             0xFF45 => self.gpu.ly_compare,
-            0xFF46 => 0, // TODO
-            0xFF47 => self.gpu.bg_palette_data,
+            0xFF46 => 0, // TODO: OAM DMA source address & start
+            0xFF47 => self.gpu.bg_palette_data.0,
             0xFF48 => self.gpu.obj_palette_0_data,
             0xFF49 => self.gpu.obj_palette_1_data,
             0xFF4A => self.gpu.window_y,
@@ -121,10 +121,10 @@ impl Memory {
             0xFF41 => self.gpu.lcd_status.0 = value,
             0xFF42 => self.gpu.viewport_y = value,
             0xFF43 => self.gpu.viewport_x = value,
-            0xFF44 => {}
+            0xFF44 => {} // LCD Y is read-only
             0xFF45 => self.gpu.ly_compare = value,
-            0xFF46 => {} // TODO
-            0xFF47 => self.gpu.bg_palette_data = value,
+            0xFF46 => {} // TODO: OAM DMA source address & start
+            0xFF47 => self.gpu.bg_palette_data.0 = value,
             0xFF48 => self.gpu.obj_palette_0_data = value,
             0xFF49 => self.gpu.obj_palette_1_data = value,
             0xFF4A => self.gpu.window_y = value,
