@@ -7,6 +7,9 @@ use crate::cycles::TCycles;
 use crate::interrupts::{Interrupt, Interrupts};
 use crate::screen::Screen;
 
+use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
+
 const VRAM_SIZE: usize = 0x2000;
 
 const HBLANK_PERIOD: TCycles = TCycles(204);
@@ -142,13 +145,7 @@ pub struct LcdStatusRegister(pub u8);
 #[allow(dead_code)]
 impl LcdStatusRegister {
     fn status(&self) -> LcdStatus {
-        match get_bits(self.0, 0, 2) {
-            0 => LcdStatus::HBlank,
-            1 => LcdStatus::VBlank,
-            2 => LcdStatus::SearchingOAM,
-            3 => LcdStatus::TransferringDataToController,
-            _ => unreachable!(),
-        }
+        LcdStatus::from_u8(get_bits(self.0, 0, 2)).unwrap()
     }
     fn set_status(&mut self, status: LcdStatus) {
         self.0 = modify_bits(self.0, 0, 2, status as u8);
@@ -157,6 +154,7 @@ impl LcdStatusRegister {
     bit_accessors!(2, ly_lyc_equal, set_ly_lyc_equal);
 }
 
+#[derive(FromPrimitive)]
 enum LcdStatus {
     HBlank,
     VBlank,
