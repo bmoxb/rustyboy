@@ -1,7 +1,6 @@
-use std::fmt;
-
 use crate::bits::bit_accessors;
-use crate::register_type;
+
+use derive_more::Display;
 
 macro_rules! reg_pair {
     ($get:ident, $set:ident, $self:ident, $x:ident, $y:ident) => {
@@ -15,7 +14,20 @@ macro_rules! reg_pair {
     };
 }
 
-#[derive(Default)]
+#[derive(Default, Display)]
+#[display(
+    fmt = "A: {:#04X}, F: {}, B: {:#04X}, C: {:#04X}, D: {:#04X}, E: {:#04X}, H: {:#04X}, L: {:#04X}, SP: {:#06X}, PC: {:#06X}",
+    a,
+    flags,
+    b,
+    c,
+    d,
+    e,
+    h,
+    l,
+    sp,
+    pc
+)]
 pub struct Registers {
     pub a: u8,
     pub flags: Flags,
@@ -117,26 +129,16 @@ impl Registers {
     }
 }
 
-impl fmt::Display for Registers {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "A: {:#04X}, F: {}, B: {:#04X}, C: {:#04X}, D: {:#04X}, E: {:#04X}, H: {:#04X}, L: {:#04X}, SP: {:#06X}, PC: {:#06X}",
-            self.a,
-            self.flags,
-            self.b,
-            self.c,
-            self.d,
-            self.e,
-            self.h,
-            self.l,
-            self.sp,
-            self.pc,
-        )
-    }
-}
-
-register_type!(Flags);
+#[derive(Clone, Copy, Default, PartialEq, Eq, Debug, Display)]
+#[display(
+    fmt = "{:#04X} (C={}, H={}, N={}, Z={})",
+    _0,
+    "self.carry()",
+    "self.half_carry()",
+    "self.subtraction()",
+    "self.zero()"
+)]
+pub struct Flags(pub u8);
 
 impl Flags {
     pub fn new(c: bool, h: bool, n: bool, z: bool) -> Self {
@@ -152,20 +154,6 @@ impl Flags {
     bit_accessors!(5, half_carry, set_half_carry);
     bit_accessors!(6, subtraction, set_subtraction);
     bit_accessors!(7, zero, set_zero);
-}
-
-impl fmt::Display for Flags {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{:#04X} (C={}, H={}, N={}, Z={})",
-            self.0,
-            self.carry(),
-            self.half_carry(),
-            self.subtraction(),
-            self.zero()
-        )
-    }
 }
 
 #[cfg(test)]
