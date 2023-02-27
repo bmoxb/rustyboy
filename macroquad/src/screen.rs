@@ -1,6 +1,8 @@
-pub struct MacroquadDisplay;
+use rustyboy_core::screen::Screen;
 
-impl rustyboy_core::display::Display for MacroquadDisplay {
+pub struct MacroquadScreen;
+
+impl Screen for MacroquadScreen {
     fn write_scanline(&mut self) {
         // TODO
     }

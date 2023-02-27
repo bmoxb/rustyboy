@@ -4,22 +4,22 @@ mod tests;
 mod bits;
 mod cpu;
 mod cycles;
-pub mod display;
 mod gpu;
 mod interrupts;
 mod joypad;
 pub mod mbc;
 mod memory;
+pub mod screen;
 mod serial;
 mod timer;
 
 use std::io::Write;
 
 use cpu::Cpu;
-use display::Display;
 use joypad::Joypad;
 use mbc::MemoryBankController;
 use memory::Memory;
+use screen::Screen;
 
 pub struct GameBoy {
     cpu: Cpu,
@@ -28,10 +28,10 @@ pub struct GameBoy {
 }
 
 impl GameBoy {
-    pub fn new(mbc: Box<dyn MemoryBankController>, display: Box<dyn Display>) -> Self {
+    pub fn new(mbc: Box<dyn MemoryBankController>, screen: Box<dyn Screen>) -> Self {
         GameBoy {
             cpu: Cpu::new(),
-            mem: Memory::new(mbc, display),
+            mem: Memory::new(mbc, screen),
             gb_doctor_logging: None,
         }
     }
