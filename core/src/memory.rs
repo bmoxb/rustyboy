@@ -1,3 +1,4 @@
+use crate::cycles::MCycles;
 use crate::gpu::Gpu;
 use crate::interrupts::Interrupts;
 use crate::joypad::Joypad;
@@ -34,12 +35,10 @@ impl Memory {
         }
     }
 
-    pub fn update(&mut self, cpu_cycles: usize) {
-        let t_cycles = cpu_cycles * 4;
-
-        self.timer.update(&mut self.interrupts, cpu_cycles);
+    pub fn update(&mut self, cycles: MCycles) {
+        self.gpu.update(cycles.into());
+        self.timer.update(&mut self.interrupts, cycles);
         self.serial.update();
-        self.gpu.update(t_cycles);
     }
 
     pub fn read8(&self, addr: u16) -> u8 {

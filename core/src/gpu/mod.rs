@@ -1,13 +1,14 @@
 use crate::bits::{bit_accessors, get_bits, modify_bits};
+use crate::cycles::TCycles;
 use crate::register_type;
 use crate::Display;
 
 const VRAM_SIZE: usize = 0x2000;
 
-const HBLANK_PERIOD: usize = 204;
-const VBLANK_PERIOD: usize = 456; // single line
-const SEARCHING_OAM_PERIOD: usize = 80;
-const TRANSFERRING_DATA_PERIOD: usize = 172;
+const HBLANK_PERIOD: TCycles = TCycles(204);
+const VBLANK_PERIOD: TCycles = TCycles(456); // single line
+const SEARCHING_OAM_PERIOD: TCycles = TCycles(80);
+const TRANSFERRING_DATA_PERIOD: TCycles = TCycles(172);
 
 pub struct Gpu {
     display: Box<dyn Display>,
@@ -23,7 +24,7 @@ pub struct Gpu {
     pub obj_palette_1_data: u8,
     pub window_y: u8,
     pub window_x: u8,
-    clock: usize,
+    clock: TCycles,
     scanline: u8,
 }
 
@@ -43,13 +44,13 @@ impl Gpu {
             obj_palette_1_data: 0,
             window_y: 0,
             window_x: 0,
-            clock: 0,
+            clock: TCycles(0),
             scanline: 0,
         }
     }
 
-    pub fn update(&mut self, t_cycles: usize) {
-        self.clock += t_cycles;
+    pub fn update(&mut self, cycles: TCycles) {
+        self.clock += cycles;
 
         match self.lcd_status.status() {
             // horizontal blank
@@ -61,7 +62,7 @@ impl Gpu {
 
                     let next_status = if self.scanline == 143 {
                         self.display.swap_buffers();
-                        LcdStatus::HBlank
+                        LcdStatus::VBlank
                     } else {
                         LcdStatus::SearchingOAM
                     };

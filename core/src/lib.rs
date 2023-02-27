@@ -3,6 +3,7 @@ mod tests;
 
 mod bits;
 mod cpu;
+mod cycles;
 pub mod display;
 mod gpu;
 mod interrupts;
@@ -59,8 +60,8 @@ impl GameBoy {
             ).unwrap();
         }
 
-        let cpu_cycles = self.cpu.cycle(&mut self.mem);
-        self.mem.update(cpu_cycles);
+        let cycles = self.cpu.cycle(&mut self.mem);
+        self.mem.update(cycles);
     }
 
     pub fn joypad(&mut self) -> &Joypad {
