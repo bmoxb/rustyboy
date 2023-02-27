@@ -36,7 +36,7 @@ impl Memory {
     }
 
     pub fn update(&mut self, cycles: MCycles) {
-        self.gpu.update(cycles.into());
+        self.gpu.update(&mut self.interrupts, cycles.into());
         self.timer.update(&mut self.interrupts, cycles);
         self.serial.update();
     }

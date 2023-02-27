@@ -1,5 +1,6 @@
 use crate::bits::{bit_accessors, get_bits, modify_bits};
 use crate::cycles::TCycles;
+use crate::interrupts::{Interrupt, Interrupts};
 use crate::screen::Screen;
 
 const VRAM_SIZE: usize = 0x2000;
@@ -46,8 +47,10 @@ impl Gpu {
         }
     }
 
-    pub fn update(&mut self, cycles: TCycles) {
+    pub fn update(&mut self, interrupts: &mut Interrupts, cycles: TCycles) {
         self.clock += cycles;
+
+        self.compare_ly_lyc(interrupts);
 
         match self.lcd_status.status() {
             // horizontal blank
@@ -103,6 +106,15 @@ impl Gpu {
             }
         }
     }
+
+    fn compare_ly_lyc(&mut self, interrupts: &mut Interrupts) {
+        self.lcd_status
+            .set_ly_lyc_equal(self.lcd_y == self.ly_compare);
+
+        if self.lcd_status.ly_lyc_equal() {
+            interrupts.flag(Interrupt::LcdStat, true);
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -138,7 +150,7 @@ impl LcdStatusRegister {
         self.0 = modify_bits(self.0, 0, 2, status as u8);
     }
 
-    bit_accessors!(2, ly_and_lyc_are_equal);
+    bit_accessors!(2, ly_lyc_equal, set_ly_lyc_equal);
 }
 
 enum LcdStatus {
