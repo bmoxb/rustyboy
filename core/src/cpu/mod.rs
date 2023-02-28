@@ -634,7 +634,7 @@ impl Cpu {
                     self.regs.pc = nn;
                     6
                 } else {
-                    4
+                    3
                 }
             }
 
