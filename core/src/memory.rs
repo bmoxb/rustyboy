@@ -1,4 +1,5 @@
 use crate::cycles::MCycles;
+use crate::gpu::vram::{VRAM_END, VRAM_START};
 use crate::gpu::Gpu;
 use crate::interrupts::Interrupts;
 use crate::joypad::Joypad;
@@ -44,7 +45,7 @@ impl Memory {
     pub fn read8(&self, addr: u16) -> u8 {
         match addr {
             0x0000..=0x7FFF => self.mbc.read8(addr),
-            0x8000..=0x9FFF => self.gpu.vram[(addr - 0x8000) as usize],
+            VRAM_START..=VRAM_END => self.gpu.vram.read8(addr),
             0xA000..=0xBFFF => self.mbc.read8(addr),
             0xC000..=0xDFFF => self.wram[(addr - 0xC000) as usize],
             0xE000..=0xFDFF => {
@@ -99,7 +100,7 @@ impl Memory {
 
         match addr {
             0x0000..=0x7FFF => self.mbc.write8(addr, value),
-            0x8000..=0x9FFF => self.gpu.vram[(addr - 0x8000) as usize] = value,
+            0x8000..=0x9FFF => self.gpu.vram.write8(addr, value),
             0xA000..=0xBFFF => self.mbc.write8(addr, value),
             0xC000..=0xDFFF => self.wram[(addr - 0xC000) as usize] = value,
             0xE000..=0xFDFF => {

@@ -1,6 +1,8 @@
 mod palettes;
+pub mod vram;
 
 use palettes::*;
+use vram::VideoRam;
 
 use crate::bits::{bit_accessors, get_bits, modify_bits};
 use crate::cycles::TCycles;
@@ -10,8 +12,6 @@ use crate::screen::Screen;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
-const VRAM_SIZE: usize = 0x2000;
-
 const HBLANK_PERIOD: TCycles = TCycles(204);
 const VBLANK_PERIOD: TCycles = TCycles(456); // single line
 const SEARCHING_OAM_PERIOD: TCycles = TCycles(80);
@@ -19,7 +19,7 @@ const TRANSFERRING_DATA_PERIOD: TCycles = TCycles(172);
 
 pub struct Gpu {
     screen: Box<dyn Screen>,
-    pub vram: [u8; VRAM_SIZE],
+    pub vram: VideoRam,
     pub lcd_control: LcdControlRegister,
     pub lcd_status: LcdStatusRegister,
     pub viewport_y: u8,
@@ -38,7 +38,7 @@ impl Gpu {
     pub fn new(screen: Box<dyn Screen>) -> Self {
         Gpu {
             screen,
-            vram: [0; VRAM_SIZE],
+            vram: VideoRam::new(),
             lcd_control: LcdControlRegister(0x91),
             lcd_status: LcdStatusRegister(0x81),
             viewport_y: 0,
