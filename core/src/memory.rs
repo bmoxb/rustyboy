@@ -8,8 +8,16 @@ use crate::serial::SerialTransfer;
 use crate::timer::Timer;
 use crate::Screen;
 
-const WRAM_SIZE: usize = 0x2000;
-const HRAM_SIZE: usize = 0x7F;
+const WRAM_START: u16 = 0xC000;
+const WRAM_END: u16 = 0xDFFF;
+const WRAM_SIZE: usize = (WRAM_END - WRAM_START + 1) as usize;
+
+const ECHO_RAM_START: u16 = 0xE000;
+const ECHO_RAM_END: u16 = 0xFDFF;
+
+const HRAM_START: u16 = 0xFF80;
+const HRAM_END: u16 = 0xFFFE;
+const HRAM_SIZE: usize = (HRAM_END - HRAM_START + 1) as usize;
 
 pub struct Memory {
     mbc: Box<dyn MemoryBankController>,
@@ -47,10 +55,10 @@ impl Memory {
             0x0000..=0x7FFF => self.mbc.read8(addr),
             VRAM_START..=VRAM_END => self.gpu.vram.read8(addr),
             0xA000..=0xBFFF => self.mbc.read8(addr),
-            0xC000..=0xDFFF => self.wram[(addr - 0xC000) as usize],
-            0xE000..=0xFDFF => {
-                log::warn!("prohibited address {:#04X} read", addr);
-                self.wram[(addr - 0xE000) as usize]
+            WRAM_START..=WRAM_END => self.wram[(addr - WRAM_START) as usize],
+            ECHO_RAM_START..=ECHO_RAM_END => {
+                log::warn!("prohibited address {:#04X} read (ECHO RAM)", addr);
+                self.wram[(addr - ECHO_RAM_START) as usize]
             }
             0xFE00..=0xFE9F => unimplemented!(), // TODO: Sprite attribute table.
             0xFEA0..=0xFEFF => {
@@ -78,7 +86,7 @@ impl Memory {
             0xFF49 => self.gpu.obj_palette_1_data.0,
             0xFF4A => self.gpu.window_y,
             0xFF4B => self.gpu.window_x,
-            0xFF80..=0xFFFE => self.hram[(addr - 0xFF80) as usize],
+            HRAM_START..=HRAM_END => self.hram[(addr - HRAM_START) as usize],
             0xFFFF => self.interrupts.enable,
             _ => unimplemented!(),
         }
@@ -100,15 +108,15 @@ impl Memory {
 
         match addr {
             0x0000..=0x7FFF => self.mbc.write8(addr, value),
-            0x8000..=0x9FFF => self.gpu.vram.write8(addr, value),
+            VRAM_START..=VRAM_END => self.gpu.vram.write8(addr, value),
             0xA000..=0xBFFF => self.mbc.write8(addr, value),
-            0xC000..=0xDFFF => self.wram[(addr - 0xC000) as usize] = value,
-            0xE000..=0xFDFF => {
-                log::warn!("prohibited address {:#04X} read", addr);
-                self.wram[(addr - 0xE000) as usize] = value;
+            WRAM_START..=WRAM_END => self.wram[(addr - WRAM_START) as usize] = value,
+            ECHO_RAM_START..=ECHO_RAM_END => {
+                log::warn!("prohibited address {:#04X} written to (ECHO RAM)", addr);
+                self.wram[(addr - ECHO_RAM_START) as usize] = value;
             }
             0xFE00..=0xFE9F => unimplemented!(), // TODO: Sprite attribute table.
-            0xFEA0..=0xFEFF => log::warn!("prohibited address {:#04X} read", addr),
+            0xFEA0..=0xFEFF => log::warn!("prohibited address {:#04X} written to", addr),
             0xFF00 => self.joypad.set_byte(value),
             0xFF01 => self.serial.data = value,
             0xFF02 => self.serial.control = value,
@@ -130,7 +138,7 @@ impl Memory {
             0xFF49 => self.gpu.obj_palette_1_data.0 = value,
             0xFF4A => self.gpu.window_y = value,
             0xFF4B => self.gpu.window_x = value,
-            0xFF80..=0xFFFE => self.hram[(addr - 0xFF80) as usize] = value,
+            HRAM_START..=HRAM_END => self.hram[(addr - HRAM_START) as usize] = value,
             0xFFFF => self.interrupts.enable = value,
             _ => unimplemented!(),
         }
