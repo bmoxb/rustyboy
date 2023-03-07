@@ -1,2 +1,6 @@
 [workspace]
 members = ["core", "macroquad", "gbdoctor"]
+
+[profile.release]
+lto = true
+opt-level = "s"
