@@ -1,4 +1,5 @@
 mod palettes;
+mod tiles;
 pub mod vram;
 
 use palettes::*;
