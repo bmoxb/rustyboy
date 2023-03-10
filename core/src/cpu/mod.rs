@@ -30,7 +30,7 @@ impl Cpu {
                 h: 0x01,
                 l: 0x4D,
                 sp: 0xFFFE,
-                pc: 0x100,
+                pc: 0x0100,
             },
             halted: false,
             ime: InterruptMasterEnable::new(true),
