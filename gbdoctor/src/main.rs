@@ -14,7 +14,7 @@ fn main() {
         println!("beginning execution - press Ctrl-C to stop");
 
         loop {
-            gb.update(0.0);
+            gb.step();
 
             if let Some(b) = gb.take_serial_byte() {
                 print!("{}", b as char);
