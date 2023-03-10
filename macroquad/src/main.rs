@@ -12,9 +12,7 @@ use rustyboy_core::screen::{Colour, SCREEN_HEIGHT, SCREEN_WIDTH};
 use rustyboy_core::GameBoy;
 
 use macroquad::prelude as quad;
-
-const X_UINT: f32 = 1.0 / (SCREEN_WIDTH as f32);
-const Y_UINT: f32 = 1.0 / (SCREEN_HEIGHT as f32);
+use quad::Color;
 
 #[macroquad::main("rustyboy")]
 async fn main() {
@@ -26,26 +24,26 @@ async fn main() {
 }
 
 async fn game(mut gb: GameBoy) {
-    quad::set_camera(&quad::Camera2D::default());
-
     loop {
         let delta = quad::get_frame_time();
         gb.update(delta);
 
         for x in 0..SCREEN_WIDTH {
             for y in 0..SCREEN_HEIGHT {
+                let x_unit = quad::screen_width() / SCREEN_WIDTH as f32;
+                let y_unit = quad::screen_height() / SCREEN_HEIGHT as f32;
+
                 let colour = match gb.screen().get(x as u8, y as u8) {
-                    Colour::Black => quad::BLACK,
-                    Colour::DarkGrey => quad::GRAY,
-                    Colour::LightGrey => quad::BLUE,
-                    Colour::White => quad::WHITE,
-                    Colour::Transparent => quad::GREEN,
+                    Colour::Black => quad::color_u8!(15, 56, 15, 255),
+                    Colour::DarkGrey => quad::color_u8!(48, 98, 48, 255),
+                    Colour::LightGrey => quad::color_u8!(139, 172, 15, 255),
+                    Colour::White => quad::color_u8!(155, 188, 15, 255),
+                    Colour::Transparent => quad::color_u8!(0, 0, 0, 0),
                 };
 
-                quad::draw_rectangle(x as f32 * X_UINT, y as f32 * Y_UINT, X_UINT, Y_UINT, colour);
+                quad::draw_rectangle(x as f32 * x_unit, y as f32 * y_unit, x_unit, y_unit, colour);
             }
         }
-
         if let Some(b) = gb.take_serial_byte() {
             print!("{}", b as char);
         }
