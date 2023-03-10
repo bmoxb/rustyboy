@@ -6,7 +6,6 @@ use crate::joypad::Joypad;
 use crate::mbc::MemoryBankController;
 use crate::serial::SerialTransfer;
 use crate::timer::Timer;
-use crate::Screen;
 
 const WRAM_START: u16 = 0xC000;
 const WRAM_END: u16 = 0xDFFF;
@@ -21,7 +20,7 @@ const HRAM_SIZE: usize = (HRAM_END - HRAM_START + 1) as usize;
 
 pub struct Memory {
     mbc: Box<dyn MemoryBankController>,
-    gpu: Gpu,
+    pub gpu: Gpu,
     timer: Timer,
     pub interrupts: Interrupts,
     pub serial: SerialTransfer,
@@ -31,10 +30,10 @@ pub struct Memory {
 }
 
 impl Memory {
-    pub fn new(mbc: Box<dyn MemoryBankController>, screen: Box<dyn Screen>) -> Self {
+    pub fn new(mbc: Box<dyn MemoryBankController>) -> Self {
         Memory {
             mbc,
-            gpu: Gpu::new(screen),
+            gpu: Gpu::new(),
             timer: Timer::new(),
             interrupts: Interrupts::new(),
             serial: SerialTransfer::new(),
@@ -60,7 +59,7 @@ impl Memory {
                 log::warn!("prohibited address {:#04X} read (ECHO RAM)", addr);
                 self.wram[(addr - ECHO_RAM_START) as usize]
             }
-            0xFE00..=0xFE9F => unimplemented!(), // TODO: Sprite attribute table.
+            0xFE00..=0xFE9F => 0, // TODO: Sprite attribute table.
             0xFEA0..=0xFEFF => {
                 log::warn!("prohibited address {:#04X} read", addr);
                 0xFF
@@ -88,7 +87,10 @@ impl Memory {
             0xFF4B => self.gpu.window_x,
             HRAM_START..=HRAM_END => self.hram[(addr - HRAM_START) as usize],
             0xFFFF => self.interrupts.enable,
-            _ => unimplemented!(),
+            _ => {
+                log::trace!("{:#04X}", addr);
+                0
+            }
         }
     }
 
@@ -115,7 +117,7 @@ impl Memory {
                 log::warn!("prohibited address {:#04X} written to (ECHO RAM)", addr);
                 self.wram[(addr - ECHO_RAM_START) as usize] = value;
             }
-            0xFE00..=0xFE9F => unimplemented!(), // TODO: Sprite attribute table.
+            0xFE00..=0xFE9F => {} // TODO: Sprite attribute table.
             0xFEA0..=0xFEFF => log::warn!("prohibited address {:#04X} written to", addr),
             0xFF00 => self.joypad.set_byte(value),
             0xFF01 => self.serial.data = value,
@@ -140,7 +142,7 @@ impl Memory {
             0xFF4B => self.gpu.window_x = value,
             HRAM_START..=HRAM_END => self.hram[(addr - HRAM_START) as usize] = value,
             0xFFFF => self.interrupts.enable = value,
-            _ => unimplemented!(),
+            _ => log::trace!("{:#04X}", addr),
         }
     }
 

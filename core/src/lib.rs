@@ -31,10 +31,10 @@ pub struct GameBoy {
 }
 
 impl GameBoy {
-    pub fn new(mbc: Box<dyn MemoryBankController>, screen: Box<dyn Screen>) -> Self {
+    pub fn new(mbc: Box<dyn MemoryBankController>) -> Self {
         GameBoy {
             cpu: Cpu::new(),
-            mem: Memory::new(mbc, screen),
+            mem: Memory::new(mbc),
             gb_doctor_logging: None,
         }
     }
@@ -74,6 +74,10 @@ impl GameBoy {
 
     pub fn joypad(&mut self) -> &Joypad {
         &mut self.mem.joypad
+    }
+
+    pub fn screen(&self) -> &Screen {
+        &self.mem.gpu.screen
     }
 
     pub fn enable_gb_doctor_logging(&mut self, destination: Box<dyn Write>) {
