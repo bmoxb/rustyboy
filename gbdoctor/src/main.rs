@@ -6,8 +6,7 @@ fn main() {
 
     if let [_, rom_path, log_path] = &args[..] {
         let mbc = rustyboy_core::mbc::from_rom_file(rom_path).unwrap();
-        let display = Box::new(rustyboy_core::screen::StubScreen);
-        let mut gb = rustyboy_core::GameBoy::new(mbc, display);
+        let mut gb = rustyboy_core::GameBoy::new(mbc);
 
         let file = File::create(log_path).unwrap();
         gb.enable_gb_doctor_logging(Box::new(file));

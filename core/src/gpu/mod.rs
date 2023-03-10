@@ -1,14 +1,13 @@
 mod palettes;
-mod tiles;
 pub mod vram;
 
 use palettes::*;
-use vram::VideoRam;
+use vram::{VideoRam, TILE_WIDTH};
 
 use crate::bits::{bit_accessors, get_bits, modify_bits};
 use crate::cycles::TCycles;
 use crate::interrupts::{Interrupt, Interrupts};
-use crate::screen::Screen;
+use crate::screen::{Screen, SCREEN_WIDTH};
 
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
@@ -19,7 +18,7 @@ const SEARCHING_OAM_PERIOD: TCycles = TCycles(80);
 const TRANSFERRING_DATA_PERIOD: TCycles = TCycles(172);
 
 pub struct Gpu {
-    screen: Box<dyn Screen>,
+    pub screen: Screen,
     pub vram: VideoRam,
     pub lcd_control: LcdControlRegister,
     pub lcd_status: LcdStatusRegister,
@@ -36,9 +35,9 @@ pub struct Gpu {
 }
 
 impl Gpu {
-    pub fn new(screen: Box<dyn Screen>) -> Self {
+    pub fn new() -> Self {
         Gpu {
-            screen,
+            screen: Screen::new(),
             vram: VideoRam::new(),
             lcd_control: LcdControlRegister(0x91),
             lcd_status: LcdStatusRegister(0x81),
@@ -69,7 +68,6 @@ impl Gpu {
                     self.lcd_y += 1;
 
                     let next_status = if self.lcd_y == 143 {
-                        self.screen.swap_buffers();
                         LcdStatus::VBlank
                     } else {
                         LcdStatus::SearchingOAM
@@ -109,7 +107,7 @@ impl Gpu {
                     self.clock -= TRANSFERRING_DATA_PERIOD;
                     self.lcd_status.set_status(LcdStatus::HBlank);
 
-                    self.screen.write_scanline();
+                    self.draw_scanline();
                 }
             }
         }
@@ -121,6 +119,28 @@ impl Gpu {
 
         if self.lcd_status.ly_lyc_equal() {
             interrupts.flag(Interrupt::LcdStat, true);
+        }
+    }
+
+    fn draw_scanline(&mut self) {
+        let mut x = 0;
+
+        while x < SCREEN_WIDTH {
+            let map_x = (x / TILE_WIDTH) as u8;
+            let map_y = self.lcd_y / TILE_WIDTH as u8;
+            let tile_index = self.vram.read_tile_index_from_map_9800(map_x, map_y);
+
+            let line_number = self.lcd_y % TILE_WIDTH as u8;
+            let colour_ids = self
+                .vram
+                .read_tile_line_unsigned_index(tile_index, line_number);
+
+            for (i, colour_id) in colour_ids.into_iter().enumerate() {
+                let colour = self.bg_palette_data.colour_for_id(colour_id);
+                self.screen.set((x + i) as u8, self.lcd_y, colour);
+            }
+
+            x += TILE_WIDTH
         }
     }
 }
@@ -155,7 +175,7 @@ impl LcdStatusRegister {
     bit_accessors!(2, ly_lyc_equal, set_ly_lyc_equal);
 }
 
-#[derive(FromPrimitive)]
+#[derive(Debug, FromPrimitive)]
 enum LcdStatus {
     HBlank,
     VBlank,

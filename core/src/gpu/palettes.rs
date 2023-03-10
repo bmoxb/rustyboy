@@ -1,18 +1,7 @@
-#![allow(dead_code)]
-
-use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
 use crate::bits::get_bits;
-
-#[derive(Clone, Copy, FromPrimitive)]
-pub enum Colour {
-    White,
-    LightGrey,
-    DarkGrey,
-    Black,
-    Transparent,
-}
+use crate::screen::Colour;
 
 pub struct BackgroundPalette(pub u8);
 
