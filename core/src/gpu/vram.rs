@@ -1,5 +1,4 @@
 use crate::bits::get_bit;
-use crate::gpu::palettes::BackgroundPalette;
 
 pub const VRAM_START: u16 = 0x8000;
 pub const VRAM_END: u16 = 0x9FFF;
@@ -43,6 +42,7 @@ impl VideoRam {
 
     // Read a tile at the given index in the memory area 0x8800 to 0x8FFF. This method may be used over
     // [`read_tile_unsigned_index`] for drawing the background or window when LCD control bit 4 is set.
+    #[allow(dead_code)]
     pub fn read_tile_line_signed_index(&self, _offset: i8, line: u8) -> [u8; TILE_WIDTH] {
         debug_assert!((line as usize) < TILE_WIDTH);
         unimplemented!() // TODO
@@ -52,7 +52,8 @@ impl VideoRam {
         self.read_tile_index(0x9800, x, y)
     }
 
-    pub fn read_tile_index_from_map_9C00(&self, x: u8, y: u8) -> u8 {
+    #[allow(dead_code)]
+    pub fn read_tile_index_from_map_9c00(&self, x: u8, y: u8) -> u8 {
         self.read_tile_index(0x9C00, x, y)
     }
 

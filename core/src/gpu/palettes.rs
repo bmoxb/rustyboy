@@ -16,6 +16,7 @@ impl BackgroundPalette {
 pub struct ObjectPalette(pub u8);
 
 impl ObjectPalette {
+    #[allow(dead_code)]
     pub fn colour_for_id(&self, id: u8) -> Colour {
         debug_assert!(id < 4);
         if id == 0 {
