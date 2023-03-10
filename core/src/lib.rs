@@ -5,6 +5,7 @@ mod bits;
 mod cpu;
 mod gpu;
 mod interrupts;
+mod joypad;
 pub mod mbc;
 mod memory;
 mod serial;
