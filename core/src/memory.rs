@@ -1,5 +1,6 @@
 use crate::gpu::Gpu;
 use crate::interrupts::Interrupts;
+use crate::joypad::Joypad;
 use crate::mbc::MemoryBankController;
 use crate::serial::SerialTransfer;
 use crate::timer::Timer;
@@ -13,6 +14,7 @@ pub struct Memory {
     timer: Timer,
     pub interrupts: Interrupts,
     pub serial: SerialTransfer,
+    pub joypad: Joypad,
     wram: [u8; WRAM_SIZE],
     hram: [u8; HRAM_SIZE],
 }
@@ -25,6 +27,7 @@ impl Memory {
             timer: Timer::default(),
             interrupts: Interrupts::default(),
             serial: SerialTransfer::default(),
+            joypad: Joypad::new(),
             wram: [0; WRAM_SIZE],
             hram: [0; HRAM_SIZE],
         }
@@ -51,7 +54,7 @@ impl Memory {
                 log::warn!("prohibited address {:#04X} read", addr);
                 0xFF
             }
-            0xFF00 => 0, // TODO: joypad
+            0xFF00 => self.joypad.get_byte(),
             0xFF01 => self.serial.data,
             0xFF02 => self.serial.control,
             0xFF04 => self.timer.divider,
@@ -91,7 +94,7 @@ impl Memory {
             }
             0xFE00..=0xFE9F => unimplemented!(), // TODO: Sprite attribute table.
             0xFEA0..=0xFEFF => log::warn!("prohibited address {:#04X} read", addr),
-            0xFF00 => {} // TODO: joypad
+            0xFF00 => self.joypad.set_byte(value),
             0xFF01 => self.serial.data = value,
             0xFF02 => self.serial.control = value,
             0xFF04 => self.timer.divider = value,

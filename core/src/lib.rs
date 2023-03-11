@@ -5,12 +5,14 @@ mod bits;
 mod cpu;
 mod gpu;
 mod interrupts;
+mod joypad;
 pub mod mbc;
 mod memory;
 mod serial;
 mod timer;
 
 use cpu::Cpu;
+use joypad::Joypad;
 use mbc::MemoryBankController;
 use memory::Memory;
 
@@ -55,6 +57,10 @@ impl GameBoy {
 
         let cpu_cycles = self.cpu.cycle(&mut self.mem);
         self.mem.update(cpu_cycles);
+    }
+
+    pub fn joypad(&mut self) -> &Joypad {
+        &mut self.mem.joypad
     }
 
     pub fn take_serial_byte(&mut self) -> Option<u8> {
