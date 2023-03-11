@@ -8,6 +8,7 @@ mod web;
 #[cfg(target_arch = "wasm32")]
 use web as platform;
 
+use rustyboy_core::joypad::Button;
 use rustyboy_core::screen::{Colour, SCREEN_HEIGHT, SCREEN_WIDTH};
 use rustyboy_core::GameBoy;
 
@@ -44,6 +45,17 @@ async fn game(mut gb: GameBoy) {
                 quad::draw_rectangle(x as f32 * x_unit, y as f32 * y_unit, x_unit, y_unit, colour);
             }
         }
+
+        let jp = gb.joypad();
+        jp.set_button(Button::A, quad::is_key_down(quad::KeyCode::Z));
+        jp.set_button(Button::B, quad::is_key_down(quad::KeyCode::X));
+        jp.set_button(Button::Start, quad::is_key_down(quad::KeyCode::Enter));
+        jp.set_button(Button::Select, quad::is_key_down(quad::KeyCode::RightShift));
+        jp.set_button(Button::Up, quad::is_key_down(quad::KeyCode::Up));
+        jp.set_button(Button::Down, quad::is_key_down(quad::KeyCode::Down));
+        jp.set_button(Button::Left, quad::is_key_down(quad::KeyCode::Left));
+        jp.set_button(Button::Right, quad::is_key_down(quad::KeyCode::Right));
+
         if let Some(b) = gb.take_serial_byte() {
             print!("{}", b as char);
         }

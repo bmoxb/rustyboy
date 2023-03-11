@@ -6,7 +6,7 @@ mod cpu;
 mod cycles;
 mod gpu;
 mod interrupts;
-mod joypad;
+pub mod joypad;
 pub mod mbc;
 mod memory;
 pub mod screen;
@@ -76,7 +76,7 @@ impl GameBoy {
         cycles
     }
 
-    pub fn joypad(&mut self) -> &Joypad {
+    pub fn joypad(&mut self) -> &mut Joypad {
         &mut self.mem.joypad
     }
 
