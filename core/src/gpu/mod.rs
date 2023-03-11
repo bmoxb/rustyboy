@@ -54,6 +54,7 @@ impl Gpu {
         }
     }
 
+    // Handle the transitions between rendering states and draw to the screen appropriately.
     pub fn update(&mut self, interrupts: &mut Interrupts, cycles: TCycles) {
         self.clock += cycles;
 
@@ -64,16 +65,8 @@ impl Gpu {
             LcdStatus::HBlank => {
                 if self.clock >= HBLANK_PERIOD {
                     self.clock -= HBLANK_PERIOD;
-
-                    self.lcd_y += 1;
-
-                    let next_status = if self.lcd_y == 143 {
-                        LcdStatus::VBlank
-                    } else {
-                        LcdStatus::SearchingOAM
-                    };
-
-                    self.lcd_status.set_status(next_status);
+                    let next = self.hblank(interrupts);
+                    self.lcd_status.set_status(next);
                 }
             }
 
@@ -81,14 +74,8 @@ impl Gpu {
             LcdStatus::VBlank => {
                 if self.clock >= VBLANK_PERIOD {
                     self.clock -= VBLANK_PERIOD;
-
-                    self.lcd_y += 1;
-
-                    // if 10 lines done since HBlank (i.e., 10 * VBLANK_PERIOD ticks elapsed)
-                    if self.lcd_y > 153 {
-                        self.lcd_y = 0;
-                        self.lcd_status.set_status(LcdStatus::SearchingOAM);
-                    }
+                    let next = self.vblank();
+                    self.lcd_status.set_status(next);
                 }
             }
 
@@ -96,21 +83,60 @@ impl Gpu {
             LcdStatus::SearchingOAM => {
                 if self.clock >= SEARCHING_OAM_PERIOD {
                     self.clock -= SEARCHING_OAM_PERIOD;
-                    self.lcd_status
-                        .set_status(LcdStatus::TransferringDataToController);
+                    let next = self.searching_oam();
+                    self.lcd_status.set_status(next);
                 }
             }
 
             // scanline (accessing VRAM)
-            LcdStatus::TransferringDataToController => {
+            LcdStatus::TransferringData => {
                 if self.clock >= TRANSFERRING_DATA_PERIOD {
                     self.clock -= TRANSFERRING_DATA_PERIOD;
-                    self.lcd_status.set_status(LcdStatus::HBlank);
-
-                    self.draw_scanline();
+                    let next = self.transferring_data();
+                    self.lcd_status.set_status(next);
                 }
             }
         }
+    }
+
+    // Called after a scanline has been drawn. Increments the LCD Y position and, if we've reached the button of the
+    // screen, will flag the VBlank interrupt and transition to the VBlank state. If however we are not yet at the
+    // bottom of the screen, then we will move on to the next scanline by transitioning to the 'searching OAM' state.
+    fn hblank(&mut self, interrupts: &mut Interrupts) -> LcdStatus {
+        self.lcd_y += 1;
+
+        if self.lcd_y == 143 {
+            interrupts.flag(Interrupt::VBlank, true);
+            LcdStatus::VBlank
+        } else {
+            LcdStatus::SearchingOAM
+        }
+    }
+
+    // Called after all scanlines have been drawn. Will remain in this state and increment LCD Y position until the
+    // LCD Y position reaches 10 below the height of the screen, at which point LCD Y is reset to 0 and we transition
+    // to the 'searching OAM' state.
+    fn vblank(&mut self) -> LcdStatus {
+        self.lcd_y += 1;
+
+        // if 10 lines done since final HBlank (i.e., 10 * VBLANK_PERIOD ticks elapsed)
+        if self.lcd_y > 153 {
+            self.lcd_y = 0;
+            return LcdStatus::SearchingOAM;
+        }
+
+        LcdStatus::VBlank
+    }
+
+    // TODO
+    fn searching_oam(&mut self) -> LcdStatus {
+        LcdStatus::TransferringData
+    }
+
+    // In this state we handle drawing a scanline to the screen before then transitioning to the HBlank state.
+    fn transferring_data(&mut self) -> LcdStatus {
+        self.draw_scanline();
+        LcdStatus::HBlank
     }
 
     fn compare_ly_lyc(&mut self, interrupts: &mut Interrupts) {
@@ -180,5 +206,5 @@ enum LcdStatus {
     HBlank,
     VBlank,
     SearchingOAM,
-    TransferringDataToController,
+    TransferringData,
 }
