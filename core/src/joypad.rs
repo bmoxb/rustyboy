@@ -14,6 +14,7 @@ enum Button {
     B,
 }
 
+#[derive(Debug, PartialEq)]
 enum SelectedButtons {
     ActionButtons,
     DirectionButtons,
@@ -77,5 +78,37 @@ impl Joypad {
     #[allow(dead_code)]
     fn set_button(&mut self, button: Button, value: bool) {
         self.buttons[button as usize] = value;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn get() {
+        let mut j = Joypad::new();
+
+        j.selected = SelectedButtons::ActionButtons;
+        j.set_button(Button::A, true);
+        j.set_button(Button::Select, true);
+        assert_eq!(j.get_byte(), 0b100101);
+
+        j.selected = SelectedButtons::DirectionButtons;
+        assert_eq!(j.get_byte(), 0b10000);
+        j.set_button(Button::Up, true);
+        j.set_button(Button::Down, true);
+        assert_eq!(j.get_byte(), 0b11100);
+    }
+
+    #[test]
+    fn set() {
+        let mut j = Joypad::new();
+        j.set_byte(0);
+        assert_eq!(j.selected, SelectedButtons::None);
+        j.set_byte(0b10000);
+        assert_eq!(j.selected, SelectedButtons::DirectionButtons);
+        j.set_byte(0b100000);
+        assert_eq!(j.selected, SelectedButtons::ActionButtons);
     }
 }
