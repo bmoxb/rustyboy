@@ -47,6 +47,7 @@ As instructions are executed on the CPU, the number of cycles taken to execute e
   * [x] Implement instructions
   * [x] Interrupt handling
   * [x] Pass all Blargg test ROMs
+  * [ ] STOP instruction
 * [x] Memory map
 * [x] Timer
 * [ ] Cartridges
@@ -54,5 +55,11 @@ As instructions are executed on the CPU, the number of cycles taken to execute e
   * [ ] MBC-1
   * [ ] MBC-3
   * [ ] MBC-5
-* [ ] Joypad input
+* [x] Joypad input
+* [ ] Graphics
+  * [ ] Draw background
+  * [ ] Background scolling
+  * [ ] Draw window
+  * [ ] Draw sprites
+  * [ ] Handle 8x16 sprites
 * [ ] Audio
