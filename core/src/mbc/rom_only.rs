@@ -13,15 +13,15 @@ impl RomOnly {
 }
 
 impl super::MemoryBankController for RomOnly {
+    fn mbc_name(&self) -> &str {
+        "ROM ONLY"
+    }
+
     fn read8(&self, addr: u16) -> u8 {
         self.rom[addr as usize]
     }
 
     fn write8(&mut self, addr: u16, value: u8) {
         log::warn!("attempt made to write {value:#02X} to address {addr:#04X} of ROM-only MBC");
-    }
-
-    fn name(&self) -> &str {
-        "ROM ONLY"
     }
 }
