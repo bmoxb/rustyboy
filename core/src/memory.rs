@@ -14,7 +14,7 @@ pub struct Memory {
     timer: Timer,
     pub interrupts: Interrupts,
     pub serial: SerialTransfer,
-    joypad: Joypad,
+    pub joypad: Joypad,
     wram: [u8; WRAM_SIZE],
     hram: [u8; HRAM_SIZE],
 }

@@ -3,7 +3,7 @@ use crate::bits::{get_bit, modify_bit};
 const BUTTON_COUNT: usize = 8;
 
 #[derive(Clone, Copy)]
-enum Button {
+pub enum Button {
     Start,
     Select,
     Down,
@@ -30,6 +30,7 @@ pub struct Joypad {
 }
 
 impl Joypad {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Joypad {
             buttons: [false; BUTTON_COUNT],
