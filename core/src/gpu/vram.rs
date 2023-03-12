@@ -21,12 +21,12 @@ impl VideoRam {
     }
 
     pub fn read8(&self, addr: u16) -> u8 {
-        debug_assert!(addr >= VRAM_START);
+        debug_assert!((VRAM_START..=VRAM_END).contains(&addr));
         self.data[(addr - VRAM_START) as usize]
     }
 
     pub fn write8(&mut self, addr: u16, value: u8) {
-        debug_assert!(addr >= VRAM_START);
+        debug_assert!((VRAM_START..=VRAM_END).contains(&addr));
         self.data[(addr - VRAM_START) as usize] = value;
     }
 

@@ -1,6 +1,8 @@
+pub mod oam;
 mod palettes;
 pub mod vram;
 
+use oam::SpriteAttributeTable;
 use palettes::*;
 use vram::{VideoRam, TILE_WIDTH};
 
@@ -12,6 +14,8 @@ use crate::screen::{Screen, SCREEN_WIDTH};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
+use self::oam::SPRITE_COUNT;
+
 const HBLANK_PERIOD: TCycles = TCycles(204);
 const VBLANK_PERIOD: TCycles = TCycles(456); // single line
 const SEARCHING_OAM_PERIOD: TCycles = TCycles(80);
@@ -20,8 +24,10 @@ const TRANSFERRING_DATA_PERIOD: TCycles = TCycles(172);
 pub struct Gpu {
     // The screen to which the GPU will draw.
     pub screen: Screen,
-    // 8 KiB of video memory (contains tile map, tile data, etc.)
+    // Video memory (contains tile map, tile data, etc.)
     pub vram: VideoRam,
+    // Object attribute memory / sprite attribute table (contains sprite positions and attributes).
+    pub oam: SpriteAttributeTable,
     // 0xFF40 - LCD control register.
     pub lcd_control: LcdControlRegister,
     // 0xFF41 - LCD status register.
@@ -53,6 +59,7 @@ impl Gpu {
         Gpu {
             screen: Screen::new(),
             vram: VideoRam::new(),
+            oam: SpriteAttributeTable::new(),
             lcd_control: LcdControlRegister(0x91),
             lcd_status: LcdStatusRegister(0x81),
             viewport_y: 0,
@@ -163,9 +170,12 @@ impl Gpu {
     }
 
     fn draw_scanline(&mut self) {
-        let mut x = 0;
+        self.draw_background_scanline();
+        self.draw_sprites_scanline();
+    }
 
-        while x < SCREEN_WIDTH {
+    fn draw_background_scanline(&mut self) {
+        for x in (0..SCREEN_WIDTH).step_by(TILE_WIDTH) {
             let map_x = (x / TILE_WIDTH) as u8;
             let map_y = self.lcd_y / TILE_WIDTH as u8;
             let tile_index = self.vram.read_tile_index_from_map_9800(map_x, map_y);
@@ -179,8 +189,42 @@ impl Gpu {
                 let colour = self.bg_palette_data.colour_for_id(colour_id);
                 self.screen.set((x + i) as u8, self.lcd_y, colour);
             }
+        }
+    }
 
-            x += TILE_WIDTH
+    fn draw_sprites_scanline(&mut self) {
+        let mut sprites_drawn = 0;
+
+        for index in 0..SPRITE_COUNT {
+            let sprite = self.oam.read_sprite(index);
+
+            let scanline_in_sprite_bounds =
+                (sprite.y..(sprite.y + TILE_WIDTH as u8)).contains(&self.lcd_y);
+
+            if scanline_in_sprite_bounds {
+                // TODO: Handle flipping, priority, etc.
+
+                let colour_ids = self
+                    .vram
+                    .read_tile_line_unsigned_index(sprite.tile_index, self.lcd_y - sprite.y);
+
+                let palette = if sprite.use_palette_1 {
+                    &self.obj_palette_1_data
+                } else {
+                    &self.obj_palette_0_data
+                };
+
+                for (i, colour_id) in colour_ids.into_iter().enumerate() {
+                    let colour = palette.colour_for_id(colour_id);
+                    self.screen.set(sprite.x + i as u8, self.lcd_y, colour);
+                }
+
+                sprites_drawn += 1;
+            }
+
+            if sprites_drawn >= 10 {
+                break;
+            }
         }
     }
 }
