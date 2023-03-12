@@ -1,4 +1,5 @@
 use crate::cycles::MCycles;
+use crate::gpu::oam::{OAM_END, OAM_START};
 use crate::gpu::vram::{VRAM_END, VRAM_START};
 use crate::gpu::Gpu;
 use crate::interrupts::Interrupts;
@@ -59,7 +60,7 @@ impl Memory {
                 log::warn!("prohibited address {:#04X} read (ECHO RAM)", addr);
                 self.wram[(addr - ECHO_RAM_START) as usize]
             }
-            0xFE00..=0xFE9F => 0, // TODO: Sprite attribute table.
+            OAM_START..=OAM_END => self.gpu.oam.read8(addr),
             0xFEA0..=0xFEFF => {
                 log::warn!("prohibited address {:#04X} read", addr);
                 0xFF
@@ -117,7 +118,7 @@ impl Memory {
                 log::warn!("prohibited address {:#04X} written to (ECHO RAM)", addr);
                 self.wram[(addr - ECHO_RAM_START) as usize] = value;
             }
-            0xFE00..=0xFE9F => {} // TODO: Sprite attribute table.
+            OAM_START..=OAM_END => self.gpu.oam.write8(addr, value),
             0xFEA0..=0xFEFF => log::warn!("prohibited address {:#04X} written to", addr),
             0xFF00 => self.joypad.set_byte(value),
             0xFF01 => self.serial.data = value,
@@ -134,7 +135,9 @@ impl Memory {
             0xFF43 => self.gpu.viewport_x = value,
             0xFF44 => {} // LCD Y is read-only
             0xFF45 => self.gpu.ly_compare = value,
-            0xFF46 => {} // TODO: OAM DMA source address & start
+            0xFF46 => {
+                println!("OAM transfer");
+            } // TODO: OAM DMA source address & start
             0xFF47 => self.gpu.bg_palette_data.0 = value,
             0xFF48 => self.gpu.obj_palette_0_data.0 = value,
             0xFF49 => self.gpu.obj_palette_1_data.0 = value,
