@@ -1,5 +1,5 @@
 use crate::cycles::MCycles;
-use crate::gpu::oam::{OAM_END, OAM_START};
+use crate::gpu::oam::{OAM_END, OAM_SIZE, OAM_START};
 use crate::gpu::vram::{VRAM_END, VRAM_START};
 use crate::gpu::Gpu;
 use crate::interrupts::Interrupts;
@@ -19,6 +19,8 @@ const HRAM_START: u16 = 0xFF80;
 const HRAM_END: u16 = 0xFFFE;
 const HRAM_SIZE: usize = (HRAM_END - HRAM_START + 1) as usize;
 
+const OAM_TRANSFER_PERIOD: MCycles = MCycles(160);
+
 pub struct Memory {
     mbc: Box<dyn MemoryBankController>,
     pub gpu: Gpu,
@@ -28,6 +30,8 @@ pub struct Memory {
     pub joypad: Joypad,
     wram: [u8; WRAM_SIZE],
     hram: [u8; HRAM_SIZE],
+    oam_transfer_source: u8,
+    oam_transfer_clock: Option<MCycles>,
 }
 
 impl Memory {
@@ -41,6 +45,8 @@ impl Memory {
             joypad: Joypad::new(),
             wram: [0; WRAM_SIZE],
             hram: [0; HRAM_SIZE],
+            oam_transfer_source: 0,
+            oam_transfer_clock: None,
         }
     }
 
@@ -48,6 +54,7 @@ impl Memory {
         self.gpu.update(&mut self.interrupts, cycles.into());
         self.timer.update(&mut self.interrupts, cycles);
         self.serial.update();
+        self.update_oam_transfer(cycles);
     }
 
     pub fn read8(&self, addr: u16) -> u8 {
@@ -80,7 +87,7 @@ impl Memory {
             0xFF43 => self.gpu.viewport_x,
             0xFF44 => self.gpu.lcd_y,
             0xFF45 => self.gpu.ly_compare,
-            0xFF46 => 0, // TODO: OAM DMA source address & start
+            0xFF46 => self.oam_transfer_source,
             0xFF47 => self.gpu.bg_palette_data.0,
             0xFF48 => self.gpu.obj_palette_0_data.0,
             0xFF49 => self.gpu.obj_palette_1_data.0,
@@ -136,7 +143,8 @@ impl Memory {
             0xFF44 => {} // LCD Y is read-only
             0xFF45 => self.gpu.ly_compare = value,
             0xFF46 => {
-                println!("OAM transfer");
+                self.oam_transfer_source = value;
+                self.oam_transfer_clock = Some(MCycles(0));
             } // TODO: OAM DMA source address & start
             0xFF47 => self.gpu.bg_palette_data.0 = value,
             0xFF48 => self.gpu.obj_palette_0_data.0 = value,
@@ -153,5 +161,26 @@ impl Memory {
         let [msb, lsb] = value.to_be_bytes();
         self.write8(addr, lsb); // little endian so LSB first
         self.write8(addr + 1, msb);
+    }
+
+    fn update_oam_transfer(&mut self, cycles: MCycles) {
+        if let Some(mut clock) = self.oam_transfer_clock.take() {
+            clock.0 += cycles.0;
+
+            if clock.0 >= OAM_TRANSFER_PERIOD.0 {
+                self.perform_oam_transfer();
+            } else {
+                self.oam_transfer_clock = Some(MCycles(clock.0));
+            }
+        }
+    }
+
+    fn perform_oam_transfer(&mut self) {
+        let start_address = self.oam_transfer_source as u16 * 0x100;
+
+        for (offset, addr) in (start_address..(start_address + OAM_SIZE as u16)).enumerate() {
+            let value = self.read8(addr);
+            self.gpu.oam.write8(OAM_START + offset as u16, value);
+        }
     }
 }

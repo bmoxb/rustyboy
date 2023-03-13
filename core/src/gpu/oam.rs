@@ -2,7 +2,7 @@ use crate::bits::get_bit;
 
 pub const OAM_START: u16 = 0xFE00;
 pub const OAM_END: u16 = 0xFE9F;
-const OAM_SIZE: usize = (OAM_END - OAM_START + 1) as usize;
+pub const OAM_SIZE: usize = (OAM_END - OAM_START + 1) as usize;
 
 pub const SPRITE_COUNT: u16 = 40;
 
