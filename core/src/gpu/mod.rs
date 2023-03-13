@@ -199,7 +199,7 @@ impl Gpu {
             let sprite = self.oam.read_sprite(index);
 
             let scanline_in_sprite_bounds =
-                (sprite.y..(sprite.y + TILE_WIDTH as u8)).contains(&self.lcd_y);
+                (sprite.y..(sprite.y.saturating_add(TILE_WIDTH as u8))).contains(&self.lcd_y);
 
             if scanline_in_sprite_bounds {
                 // TODO: Handle flipping, priority, etc.
