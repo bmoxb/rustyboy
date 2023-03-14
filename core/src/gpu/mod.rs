@@ -41,11 +41,11 @@ pub struct Gpu {
     // 0xFF45 - LY compare (this value is compared with LCD Y and an interrupt is triggered when they're equal).
     pub ly_compare: u8,
     // 0xFF47 - Background colour palette.
-    pub bg_palette_data: BackgroundPalette,
+    pub bg_palette_data: Palette,
     // 0xFF48 - First of two object (sprite) colour palettes.
-    pub obj_palette_0_data: ObjectPalette,
+    pub obj_palette_0_data: Palette,
     // 0xFF49 - Second of two object (sprite) colour palettes.
-    pub obj_palette_1_data: ObjectPalette,
+    pub obj_palette_1_data: Palette,
     // 0xFF4A - Window Y (position of the window).
     pub window_y: u8,
     // 0xFF4B - Window X (position of the window).
@@ -66,9 +66,9 @@ impl Gpu {
             viewport_x: 0,
             lcd_y: 0x91,
             ly_compare: 0,
-            bg_palette_data: BackgroundPalette(0xFC),
-            obj_palette_0_data: ObjectPalette(0),
-            obj_palette_1_data: ObjectPalette(0),
+            bg_palette_data: Palette(0xFC),
+            obj_palette_0_data: Palette(0),
+            obj_palette_1_data: Palette(0),
             window_y: 0,
             window_x: 0,
             clock: TCycles(0),
@@ -217,7 +217,8 @@ impl Gpu {
                 for (i, colour_id) in colour_ids.into_iter().enumerate() {
                     // the X coordinate of sprite is stored off by 8 pixels and the y coordinate by 16 pixels so need
                     // to check if we're in bounds to prevent integer underflow when subtracting
-                    if sprite.x >= 8 && self.lcd_y >= 16 {
+                    // also, a colour ID of 0 indicates transparency
+                    if sprite.x >= 8 && colour_id != 0 {
                         let colour = palette.colour_for_id(colour_id);
                         self.screen
                             .set(sprite.x - 8 + i as u8, self.lcd_y - 16, colour);

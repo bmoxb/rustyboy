@@ -9,7 +9,6 @@ pub enum Colour {
     LightGrey,
     DarkGrey,
     Black,
-    Transparent,
 }
 
 pub struct Screen {

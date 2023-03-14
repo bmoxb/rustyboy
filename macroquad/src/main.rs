@@ -39,7 +39,6 @@ async fn game(mut gb: GameBoy) {
                     Colour::DarkGrey => quad::color_u8!(48, 98, 48, 255),
                     Colour::LightGrey => quad::color_u8!(139, 172, 15, 255),
                     Colour::White => quad::color_u8!(155, 188, 15, 255),
-                    Colour::Transparent => quad::color_u8!(0, 0, 0, 0),
                 };
 
                 quad::draw_rectangle(x as f32 * x_unit, y as f32 * y_unit, x_unit, y_unit, colour);
