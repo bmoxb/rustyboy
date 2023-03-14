@@ -31,7 +31,8 @@ pub struct Memory {
     wram: [u8; WRAM_SIZE],
     hram: [u8; HRAM_SIZE],
     oam_transfer_source: u8,
-    oam_transfer_clock: Option<MCycles>,
+    pending_oam_transfer: bool,
+    oam_transfer_clock: MCycles,
 }
 
 impl Memory {
@@ -46,7 +47,8 @@ impl Memory {
             wram: [0; WRAM_SIZE],
             hram: [0; HRAM_SIZE],
             oam_transfer_source: 0,
-            oam_transfer_clock: None,
+            pending_oam_transfer: false,
+            oam_transfer_clock: MCycles(0),
         }
     }
 
@@ -144,8 +146,9 @@ impl Memory {
             0xFF45 => self.gpu.ly_compare = value,
             0xFF46 => {
                 self.oam_transfer_source = value;
-                self.oam_transfer_clock = Some(MCycles(0));
-            } // TODO: OAM DMA source address & start
+                self.pending_oam_transfer = true;
+                self.oam_transfer_clock.0 = 0;
+            }
             0xFF47 => self.gpu.bg_palette_data.0 = value,
             0xFF48 => self.gpu.obj_palette_0_data.0 = value,
             0xFF49 => self.gpu.obj_palette_1_data.0 = value,
@@ -164,13 +167,12 @@ impl Memory {
     }
 
     fn update_oam_transfer(&mut self, cycles: MCycles) {
-        if let Some(mut clock) = self.oam_transfer_clock.take() {
-            clock.0 += cycles.0;
+        if self.pending_oam_transfer {
+            self.oam_transfer_clock.0 += cycles.0;
 
-            if clock.0 >= OAM_TRANSFER_PERIOD.0 {
+            if self.oam_transfer_clock.0 >= OAM_TRANSFER_PERIOD.0 {
                 self.perform_oam_transfer();
-            } else {
-                self.oam_transfer_clock = Some(MCycles(clock.0));
+                self.pending_oam_transfer = false;
             }
         }
     }
