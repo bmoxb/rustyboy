@@ -215,8 +215,13 @@ impl Gpu {
                 };
 
                 for (i, colour_id) in colour_ids.into_iter().enumerate() {
-                    let colour = palette.colour_for_id(colour_id);
-                    self.screen.set(sprite.x + i as u8, self.lcd_y, colour);
+                    // the X coordinate of sprite is stored off by 8 pixels and the y coordinate by 16 pixels so need
+                    // to check if we're in bounds to prevent integer underflow when subtracting
+                    if sprite.x >= 8 && self.lcd_y >= 16 {
+                        let colour = palette.colour_for_id(colour_id);
+                        self.screen
+                            .set(sprite.x - 8 + i as u8, self.lcd_y - 16, colour);
+                    }
                 }
 
                 sprites_drawn += 1;
