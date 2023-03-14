@@ -43,12 +43,12 @@ impl Joypad {
 
         let selected_buttons = match self.selected {
             SelectedButtons::ActionButtons => {
-                b = modify_bit(0, 5, true); // action buttons
+                b = modify_bit(0, 4, true); // set direction buttons bit
                 ACTION_BUTTONS
             }
 
             SelectedButtons::DirectionButtons => {
-                b = modify_bit(0, 4, true); // direction buttons
+                b = modify_bit(0, 5, true); // set action buttons bit
                 DIRECTION_BUTTONS
             }
 
@@ -63,9 +63,9 @@ impl Joypad {
     }
 
     pub fn set_byte(&mut self, b: u8) {
-        self.selected = if get_bit(b, 5) {
+        self.selected = if !get_bit(b, 5) {
             SelectedButtons::ActionButtons
-        } else if get_bit(b, 4) {
+        } else if !get_bit(b, 4) {
             SelectedButtons::DirectionButtons
         } else {
             SelectedButtons::None

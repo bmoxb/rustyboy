@@ -47,8 +47,8 @@ async fn game(mut gb: GameBoy) {
         }
 
         let jp = gb.joypad();
-        jp.set_button(Button::A, quad::is_key_down(quad::KeyCode::Z));
-        jp.set_button(Button::B, quad::is_key_down(quad::KeyCode::X));
+        jp.set_button(Button::A, quad::is_key_down(quad::KeyCode::X));
+        jp.set_button(Button::B, quad::is_key_down(quad::KeyCode::Z));
         jp.set_button(Button::Start, quad::is_key_down(quad::KeyCode::Enter));
         jp.set_button(Button::Select, quad::is_key_down(quad::KeyCode::RightShift));
         jp.set_button(Button::Up, quad::is_key_down(quad::KeyCode::Up));
