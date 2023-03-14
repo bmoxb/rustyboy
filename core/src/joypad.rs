@@ -93,23 +93,21 @@ mod tests {
         j.selected = SelectedButtons::ActionButtons;
         j.set_button(Button::A, true);
         j.set_button(Button::Select, true);
-        assert_eq!(j.get_byte(), 0b101010);
+        assert_eq!(j.get_byte(), 0b11010);
 
         j.selected = SelectedButtons::DirectionButtons;
-        assert_eq!(j.get_byte(), 0b11111);
+        assert_eq!(j.get_byte(), 0b101111);
         j.set_button(Button::Up, true);
         j.set_button(Button::Down, true);
-        assert_eq!(j.get_byte(), 0b10011);
+        assert_eq!(j.get_byte(), 0b100011);
     }
 
     #[test]
     fn set() {
         let mut j = Joypad::new();
-        j.set_byte(0);
-        assert_eq!(j.selected, SelectedButtons::None);
-        j.set_byte(0b10000);
-        assert_eq!(j.selected, SelectedButtons::DirectionButtons);
         j.set_byte(0b100000);
+        assert_eq!(j.selected, SelectedButtons::DirectionButtons);
+        j.set_byte(0b010000);
         assert_eq!(j.selected, SelectedButtons::ActionButtons);
     }
 }
