@@ -27,7 +27,7 @@ impl Screen {
     }
 
     pub fn set(&mut self, x: u8, y: u8, colour: Colour) {
-        self.pixels[index(x, y)] = colour
+        self.pixels[index(x, y)] = colour;
     }
 }
 

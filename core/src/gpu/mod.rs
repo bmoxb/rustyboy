@@ -185,9 +185,10 @@ impl Gpu {
                 .vram
                 .read_tile_line_unsigned_index(tile_index, line_number);
 
-            for (i, colour_id) in colour_ids.into_iter().enumerate() {
+            for (horizontal_offset, colour_id) in colour_ids.into_iter().enumerate() {
                 let colour = self.bg_palette_data.colour_for_id(colour_id);
-                self.screen.set((x + i) as u8, self.lcd_y, colour);
+                self.screen
+                    .set((x + horizontal_offset) as u8, self.lcd_y, colour);
             }
         }
     }
