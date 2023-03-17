@@ -198,15 +198,16 @@ impl Gpu {
         for index in 0..SPRITE_COUNT {
             let sprite = self.oam.read_sprite(index);
 
-            let scanline_in_sprite_bounds =
-                (sprite.y..(sprite.y.saturating_add(TILE_WIDTH as u8))).contains(&self.lcd_y);
+            let low = sprite.y.saturating_sub(16);
+            let high = sprite.y.saturating_sub(16 - TILE_WIDTH as u8);
+            let scanline_in_sprite_bounds = (low..high).contains(&self.lcd_y);
 
             if scanline_in_sprite_bounds {
-                // TODO: Handle flipping, priority, etc.
+                let sprite_line = self.lcd_y + 16 - sprite.y;
 
                 let colour_ids = self
                     .vram
-                    .read_tile_line_unsigned_index(sprite.tile_index, self.lcd_y - sprite.y);
+                    .read_tile_line_unsigned_index(sprite.tile_index, sprite_line);
 
                 let palette = if sprite.use_palette_1 {
                     &self.obj_palette_1_data
@@ -214,14 +215,14 @@ impl Gpu {
                     &self.obj_palette_0_data
                 };
 
-                for (i, colour_id) in colour_ids.into_iter().enumerate() {
-                    // the X coordinate of sprite is stored off by 8 pixels and the y coordinate by 16 pixels so need
-                    // to check if we're in bounds to prevent integer underflow when subtracting
-                    // also, a colour ID of 0 indicates transparency
+                for (horizontal_offset, colour_id) in colour_ids.into_iter().enumerate() {
                     if sprite.x >= 8 && colour_id != 0 {
                         let colour = palette.colour_for_id(colour_id);
-                        self.screen
-                            .set(sprite.x - 8 + i as u8, self.lcd_y - 16, colour);
+                        self.screen.set(
+                            sprite.x + horizontal_offset as u8 - 8,
+                            sprite.y + sprite_line - 16,
+                            colour,
+                        );
                     }
                 }
 
