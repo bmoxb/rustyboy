@@ -16,7 +16,7 @@ pub fn from_rom_file(path: impl AsRef<Path>) -> io::Result<Box<dyn MemoryBankCon
 pub fn from_rom_data(data: &[u8]) -> Box<dyn MemoryBankController> {
     match data[CARTRIDGE_TYPE] {
         0 => Box::new(rom_only::RomOnly::new(data)),
-        1 | 2 | 3 => Box::new(mbc1::MBC1::new(data)),
+        1 | 2 | 3 => Box::new(rom_only::RomOnly::new(data)), // TODO: MBC1
         n => unimplemented!("cartridge type {n}"),
     }
 }

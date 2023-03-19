@@ -10,6 +10,7 @@ pub struct MBC1 {
 }
 
 impl MBC1 {
+    #[allow(dead_code)]
     pub fn new(data: &[u8]) -> Self {
         let ram_banks = data[super::RAM_SIZE as usize];
         let ram_size = ram_banks as usize * 0x2000;
