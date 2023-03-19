@@ -1,3 +1,0 @@
-# rustyboy (Macroquad)
-
-TODO
