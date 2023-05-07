@@ -181,9 +181,14 @@ impl Gpu {
             let tile_index = self.vram.read_tile_index_from_map_9800(map_x, map_y);
 
             let line_number = self.lcd_y % TILE_WIDTH as u8;
-            let colour_ids = self
-                .vram
-                .read_tile_line_unsigned_index(tile_index, line_number);
+
+            let colour_ids = if self.lcd_control.bg_and_window_tile_data_area() {
+                self.vram
+                    .read_tile_line_unsigned_index(tile_index, line_number)
+            } else {
+                self.vram
+                    .read_tile_line_signed_index(tile_index, line_number)
+            };
 
             for (horizontal_offset, colour_id) in colour_ids.into_iter().enumerate() {
                 let colour = self.bg_palette_data.colour_for_id(colour_id);
