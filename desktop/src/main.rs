@@ -2,12 +2,13 @@ use std::time::Instant;
 
 use pixels::{Pixels, SurfaceTexture};
 use rustyboy_core::{
+    joypad::Button,
     mbc,
     screen::{Colour, SCREEN_HEIGHT, SCREEN_WIDTH},
     GameBoy,
 };
 use winit::{
-    event::{Event, WindowEvent},
+    event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
@@ -37,10 +38,10 @@ fn main() {
 
     event_loop.run(move |event, _, control_flow| match event {
         Event::MainEventsCleared => {
-            let delta = Instant::now() - last_instant;
+            let delta = (Instant::now() - last_instant).as_secs_f32();
             last_instant = Instant::now();
 
-            gb.update(delta.as_secs_f32());
+            gb.update(delta);
 
             window.request_redraw();
         }
@@ -74,6 +75,30 @@ fn main() {
 
                 WindowEvent::Resized(size) => {
                     pixels.resize_surface(size.width, size.height).unwrap();
+                }
+
+                WindowEvent::KeyboardInput {
+                    input:
+                        KeyboardInput {
+                            virtual_keycode: Some(code),
+                            state,
+                            ..
+                        },
+                    ..
+                } => {
+                    let jp = gb.joypad();
+                    let state = matches!(state, ElementState::Pressed);
+                    match code {
+                        VirtualKeyCode::A => jp.set_button(Button::A, state),
+                        VirtualKeyCode::B => jp.set_button(Button::B, state),
+                        VirtualKeyCode::Return => jp.set_button(Button::Start, state),
+                        VirtualKeyCode::RShift => jp.set_button(Button::Select, state),
+                        VirtualKeyCode::Up => jp.set_button(Button::Up, state),
+                        VirtualKeyCode::Down => jp.set_button(Button::Down, state),
+                        VirtualKeyCode::Left => jp.set_button(Button::Left, state),
+                        VirtualKeyCode::Right => jp.set_button(Button::Right, state),
+                        _ => {}
+                    };
                 }
 
                 _ => {}
