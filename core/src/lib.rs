@@ -3,23 +3,31 @@ mod tests;
 
 mod bits;
 mod cpu;
+mod cycles;
 mod gpu;
 mod interrupts;
-mod joypad;
+pub mod joypad;
 pub mod mbc;
 mod memory;
+pub mod screen;
 mod serial;
 mod timer;
 
+use std::io::Write;
+
 use cpu::Cpu;
+use cycles::MCycles;
 use joypad::Joypad;
 use mbc::MemoryBankController;
 use memory::Memory;
+use screen::Screen;
+
+const CYCLES_PER_SECOND: MCycles = MCycles(1048576);
 
 pub struct GameBoy {
     cpu: Cpu,
     mem: Memory,
-    pub gb_doctor_logging: Option<Box<dyn std::io::Write>>,
+    gb_doctor_logging: Option<Box<dyn Write>>,
 }
 
 impl GameBoy {
@@ -31,9 +39,17 @@ impl GameBoy {
         }
     }
 
-    pub fn update(&mut self, _delta: f32) {
-        // TODO: Proper timing.
+    pub fn update(&mut self, delta: f32) {
+        let total_cycles_this_update = (delta * CYCLES_PER_SECOND.0 as f32) as u32;
+        let mut cycles_so_far = 0;
 
+        while cycles_so_far < total_cycles_this_update {
+            let cycles = self.step();
+            cycles_so_far += cycles.0;
+        }
+    }
+
+    pub fn step(&mut self) -> MCycles {
         if let Some(dst) = &mut self.gb_doctor_logging {
             writeln!(
                 *dst,
@@ -55,12 +71,21 @@ impl GameBoy {
             ).unwrap();
         }
 
-        let cpu_cycles = self.cpu.cycle(&mut self.mem);
-        self.mem.update(cpu_cycles);
+        let cycles = self.cpu.cycle(&mut self.mem);
+        self.mem.update(cycles);
+        cycles
     }
 
-    pub fn joypad(&mut self) -> &Joypad {
+    pub fn joypad(&mut self) -> &mut Joypad {
         &mut self.mem.joypad
+    }
+
+    pub fn screen(&self) -> &Screen {
+        &self.mem.gpu.screen
+    }
+
+    pub fn enable_gb_doctor_logging(&mut self, destination: Box<dyn Write>) {
+        self.gb_doctor_logging = Some(destination)
     }
 
     pub fn take_serial_byte(&mut self) -> Option<u8> {

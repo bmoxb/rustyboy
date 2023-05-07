@@ -1,4 +1,3 @@
-#[derive(Default)]
 pub struct SerialTransfer {
     pub data: u8,
     pub control: u8,
@@ -6,6 +5,14 @@ pub struct SerialTransfer {
 }
 
 impl SerialTransfer {
+    pub fn new() -> Self {
+        SerialTransfer {
+            data: 0,
+            control: 0x7E,
+            byte: None,
+        }
+    }
+
     pub fn update(&mut self) {
         // transfer requested, use internal clock
         if self.control == 0x81 {

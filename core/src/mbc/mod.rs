@@ -1,6 +1,5 @@
+mod mbc1;
 mod rom_only;
-
-use rom_only::RomOnly;
 
 use std::path::Path;
 use std::{fs, io};
@@ -16,17 +15,18 @@ pub fn from_rom_file(path: impl AsRef<Path>) -> io::Result<Box<dyn MemoryBankCon
 
 pub fn from_rom_data(data: &[u8]) -> Box<dyn MemoryBankController> {
     match data[CARTRIDGE_TYPE] {
-        0 | 1 => Box::new(RomOnly::new(data)),
+        0 => Box::new(rom_only::RomOnly::new(data)),
+        1 | 2 | 3 => Box::new(rom_only::RomOnly::new(data)), // TODO: MBC1
         n => unimplemented!("cartridge type {n}"),
     }
 }
 
 pub trait MemoryBankController {
+    fn mbc_name(&self) -> &str;
+
     fn read8(&self, addr: u16) -> u8;
 
     fn write8(&mut self, addr: u16, value: u8);
-
-    fn name(&self) -> &str;
 
     fn game_title(&self) -> String {
         let mut title = String::new();

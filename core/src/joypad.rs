@@ -43,12 +43,12 @@ impl Joypad {
 
         let selected_buttons = match self.selected {
             SelectedButtons::ActionButtons => {
-                b = modify_bit(0, 5, true); // action buttons
+                b = modify_bit(0, 4, true); // set direction buttons bit
                 ACTION_BUTTONS
             }
 
             SelectedButtons::DirectionButtons => {
-                b = modify_bit(0, 4, true); // direction buttons
+                b = modify_bit(0, 5, true); // set action buttons bit
                 DIRECTION_BUTTONS
             }
 
@@ -56,16 +56,16 @@ impl Joypad {
         };
 
         for (bit, button) in selected_buttons.iter().enumerate() {
-            b = modify_bit(b, bit as u8, self.get_button(*button));
+            b = modify_bit(b, bit as u8, !self.get_button(*button));
         }
 
         b
     }
 
     pub fn set_byte(&mut self, b: u8) {
-        self.selected = if get_bit(b, 5) {
+        self.selected = if !get_bit(b, 5) {
             SelectedButtons::ActionButtons
-        } else if get_bit(b, 4) {
+        } else if !get_bit(b, 4) {
             SelectedButtons::DirectionButtons
         } else {
             SelectedButtons::None
@@ -77,7 +77,7 @@ impl Joypad {
     }
 
     #[allow(dead_code)]
-    fn set_button(&mut self, button: Button, value: bool) {
+    pub fn set_button(&mut self, button: Button, value: bool) {
         self.buttons[button as usize] = value;
     }
 }
@@ -93,23 +93,21 @@ mod tests {
         j.selected = SelectedButtons::ActionButtons;
         j.set_button(Button::A, true);
         j.set_button(Button::Select, true);
-        assert_eq!(j.get_byte(), 0b100101);
+        assert_eq!(j.get_byte(), 0b11010);
 
         j.selected = SelectedButtons::DirectionButtons;
-        assert_eq!(j.get_byte(), 0b10000);
+        assert_eq!(j.get_byte(), 0b101111);
         j.set_button(Button::Up, true);
         j.set_button(Button::Down, true);
-        assert_eq!(j.get_byte(), 0b11100);
+        assert_eq!(j.get_byte(), 0b100011);
     }
 
     #[test]
     fn set() {
         let mut j = Joypad::new();
-        j.set_byte(0);
-        assert_eq!(j.selected, SelectedButtons::None);
-        j.set_byte(0b10000);
-        assert_eq!(j.selected, SelectedButtons::DirectionButtons);
         j.set_byte(0b100000);
+        assert_eq!(j.selected, SelectedButtons::DirectionButtons);
+        j.set_byte(0b010000);
         assert_eq!(j.selected, SelectedButtons::ActionButtons);
     }
 }

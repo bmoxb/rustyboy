@@ -1,14 +1,21 @@
-use std::fmt;
+use derive_more::Display;
+use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
 
 use crate::bits::{get_bit, modify_bit};
 
-#[derive(Default)]
 pub struct Interrupts {
     pub enable: u8,
     pub flag: u8,
 }
 
 impl Interrupts {
+    pub fn new() -> Self {
+        Interrupts {
+            enable: 0,
+            flag: 0xE1,
+        }
+    }
     pub fn flag(&mut self, int: Interrupt, value: bool) {
         self.flag = modify_bit(self.flag, int.bit(), value);
     }
@@ -25,13 +32,15 @@ impl Interrupts {
         }
 
         let index = triggered.trailing_zeros();
-        Interrupt::from_index(index)
+        Interrupt::from_u32(index)
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Display, Copy, Clone, FromPrimitive)]
+#[display(fmt = "{} interrupt")]
 pub enum Interrupt {
     VBlank,
+    #[display(fmt = "LCD STAT")]
     LcdStat,
     Timer,
     Serial,
@@ -39,37 +48,11 @@ pub enum Interrupt {
 }
 
 impl Interrupt {
-    fn from_index(index: u32) -> Option<Self> {
-        match index {
-            0 => Some(Interrupt::VBlank),
-            1 => Some(Interrupt::LcdStat),
-            2 => Some(Interrupt::Timer),
-            3 => Some(Interrupt::Serial),
-            4 => Some(Interrupt::Joypad),
-            _ => {
-                log::warn!("invalid interrupt index {index}");
-                None
-            }
-        }
-    }
-
     pub fn handler_address(&self) -> u16 {
         0x40 + (0x8 * (*self as u16))
     }
 
     pub fn bit(&self) -> u8 {
         *self as u8
-    }
-}
-
-impl fmt::Display for Interrupt {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{:?} (bit {}, INT 0x{:X})",
-            self,
-            self.bit(),
-            self.handler_address()
-        )
     }
 }

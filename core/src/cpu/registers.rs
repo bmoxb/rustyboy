@@ -1,6 +1,6 @@
-use std::fmt;
+use crate::bits::bit_accessors;
 
-use crate::bits::{get_bit, modify_bit, toggle_bit};
+use derive_more::Display;
 
 macro_rules! reg_pair {
     ($get:ident, $set:ident, $self:ident, $x:ident, $y:ident) => {
@@ -14,7 +14,20 @@ macro_rules! reg_pair {
     };
 }
 
-#[derive(Default)]
+#[derive(Default, Display)]
+#[display(
+    fmt = "A: {:#04X}, F: {}, B: {:#04X}, C: {:#04X}, D: {:#04X}, E: {:#04X}, H: {:#04X}, L: {:#04X}, SP: {:#06X}, PC: {:#06X}",
+    a,
+    flags,
+    b,
+    c,
+    d,
+    e,
+    h,
+    l,
+    sp,
+    pc
+)]
 pub struct Registers {
     pub a: u8,
     pub flags: Flags,
@@ -116,43 +129,15 @@ impl Registers {
     }
 }
 
-impl fmt::Display for Registers {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "A: {:#04X}, F: {}, B: {:#04X}, C: {:#04X}, D: {:#04X}, E: {:#04X}, H: {:#04X}, L: {:#04X}, SP: {:#06X}, PC: {:#06X}",
-            self.a,
-            self.flags,
-            self.b,
-            self.c,
-            self.d,
-            self.e,
-            self.h,
-            self.l,
-            self.sp,
-            self.pc,
-        )
-    }
-}
-
-macro_rules! flag {
-    ($get:ident, $set:ident, $toggle:ident, $bit:literal) => {
-        pub fn $get(&self) -> bool {
-            get_bit(self.0, $bit)
-        }
-
-        pub fn $set(&mut self, value: bool) {
-            self.0 = modify_bit(self.0, $bit, value);
-        }
-
-        #[allow(unused)]
-        pub fn $toggle(&mut self) {
-            self.0 = toggle_bit(self.0, $bit);
-        }
-    };
-}
-
-#[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Default, PartialEq, Eq, Debug, Display)]
+#[display(
+    fmt = "{:#04X} (C={}, H={}, N={}, Z={})",
+    _0,
+    "self.carry()",
+    "self.half_carry()",
+    "self.subtraction()",
+    "self.zero()"
+)]
 pub struct Flags(pub u8);
 
 impl Flags {
@@ -165,24 +150,10 @@ impl Flags {
         f
     }
 
-    flag!(carry, set_carry, toggle_carry, 4);
-    flag!(half_carry, set_half_carry, toggle_half_carry, 5);
-    flag!(subtraction, set_subtraction, toggle_subtraction, 6);
-    flag!(zero, set_zero, toggle_zero, 7);
-}
-
-impl fmt::Display for Flags {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{:#04X} (C={}, H={}, N={}, Z={})",
-            self.0,
-            self.carry(),
-            self.half_carry(),
-            self.subtraction(),
-            self.zero()
-        )
-    }
+    bit_accessors!(4, carry, set_carry, toggle_carry);
+    bit_accessors!(5, half_carry, set_half_carry);
+    bit_accessors!(6, subtraction, set_subtraction);
+    bit_accessors!(7, zero, set_zero);
 }
 
 #[cfg(test)]
@@ -231,7 +202,7 @@ mod tests {
         assert_eq!(flags, Flags::new(false, true, false, true));
 
         flags.toggle_carry();
-        flags.toggle_half_carry();
+        flags.set_half_carry(false);
         assert_eq!(flags, Flags::new(true, false, false, true));
     }
 }

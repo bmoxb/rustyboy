@@ -1,5 +1,7 @@
-use std::fmt;
+use derive_more::Display;
 
+#[derive(Display)]
+#[display(fmt = "IME={}", "*value as u8")]
 pub struct InterruptMasterEnable {
     value: bool,
     enable_in_cycles: Option<u8>,
@@ -43,12 +45,6 @@ impl InterruptMasterEnable {
 
     pub fn disable(&mut self, after_cycles: u8) {
         self.disable_in_cycles = Some(after_cycles);
-    }
-}
-
-impl fmt::Display for InterruptMasterEnable {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "IME={}", self.value as u8)
     }
 }
 

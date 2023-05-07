@@ -16,3 +16,59 @@ pub fn get_bit(value: u8, bit: u8) -> bool {
     let mask = 1 << bit;
     (value & mask) != 0
 }
+
+pub fn modify_bits(mut value: u8, from_inclusive: u8, to_exclusive: u8, set_to: u8) -> u8 {
+    debug_assert!(from_inclusive <= to_exclusive);
+    // TODO: there's definitely a more efficient way of doing this
+    for i in from_inclusive..to_exclusive {
+        let bit = get_bit(set_to, i - from_inclusive);
+        value = modify_bit(value, i, bit);
+    }
+    value
+}
+
+pub fn get_bits(value: u8, from_inclusive: u8, to_exclusive: u8) -> u8 {
+    debug_assert!(from_inclusive <= to_exclusive);
+    let mask = 2_u8.pow((to_exclusive - from_inclusive) as u32) - 1;
+    (value >> from_inclusive) & mask
+}
+
+macro_rules! bit_accessors {
+    ($bit:literal, $get:ident) => {
+        pub fn $get(&self) -> bool {
+            crate::bits::get_bit(self.0, $bit)
+        }
+    };
+
+    ($bit:literal, $get:ident, $set:ident) => {
+        bit_accessors!($bit, $get);
+
+        pub fn $set(&mut self, value: bool) {
+            self.0 = crate::bits::modify_bit(self.0, $bit, value);
+        }
+    };
+
+    ($bit:literal, $get:ident, $set:ident, $toggle:ident) => {
+        bit_accessors!($bit, $get, $set);
+
+        pub fn $toggle(&mut self) {
+            self.0 = crate::bits::toggle_bit(self.0, $bit);
+        }
+    };
+}
+pub(crate) use bit_accessors;
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn get_bits() {
+        assert_eq!(super::get_bits(0b11100, 1, 4), 0b110);
+        assert_eq!(super::get_bits(1, 0, 0), 0);
+    }
+
+    #[test]
+    fn modify_bits() {
+        assert_eq!(super::modify_bits(0, 1, 4, 0b111), 0b1110);
+        assert_eq!(super::modify_bits(0xFF, 2, 7, 0b10101), 0b11010111);
+    }
+}

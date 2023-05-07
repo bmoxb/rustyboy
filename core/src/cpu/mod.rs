@@ -4,6 +4,7 @@ mod opcode;
 mod registers;
 
 use crate::bits::modify_bit;
+use crate::cycles::MCycles;
 use crate::memory::Memory;
 
 use ime::InterruptMasterEnable;
@@ -29,39 +30,39 @@ impl Cpu {
                 h: 0x01,
                 l: 0x4D,
                 sp: 0xFFFE,
-                pc: 0x100,
+                pc: 0x0100,
             },
             halted: false,
             ime: InterruptMasterEnable::new(true),
         }
     }
 
-    pub fn cycle(&mut self, mem: &mut Memory) -> usize {
+    pub fn cycle(&mut self, mem: &mut Memory) -> MCycles {
         log::trace!("begin cycle - {}, {}", self.regs, self.ime);
 
         let interrupt_cycles = self.handle_interrupts(mem);
 
-        let cycles_taken = if interrupt_cycles > 0 {
+        let cycles = if interrupt_cycles > MCycles(0) {
             interrupt_cycles
         } else if self.halted {
-            1 // NOP
+            MCycles(1) // NOP
         } else {
             self.fetch_execute(mem)
         };
 
         self.ime.cycle();
 
-        log::trace!("end cycle - {}, {}", self.regs, self.ime);
+        log::trace!("end cycle after {} - {}, {}", cycles, self.regs, self.ime);
 
-        cycles_taken
+        cycles
     }
 
-    fn handle_interrupts(&mut self, mem: &mut Memory) -> usize {
-        let mut cycles_taken = 0;
+    fn handle_interrupts(&mut self, mem: &mut Memory) -> MCycles {
+        let mut cycles = MCycles(0);
 
         if let Some(int) = mem.interrupts.next_triggered_interrupt() {
             if self.ime.enabled() {
-                log::debug!("interrupt triggered {int} and calling handler");
+                log::debug!("{int} triggered and calling handler");
 
                 mem.interrupts.flag(int, false);
                 self.ime.disable(0);
@@ -69,7 +70,7 @@ impl Cpu {
                 self.stack_push(mem, self.regs.pc);
                 self.regs.pc = int.handler_address();
 
-                cycles_taken += 4;
+                cycles += MCycles(4);
             } else if self.halted {
                 // if IME=0 and halted, PC is incremented so as to continue execution after the HALT instruction
                 self.regs.pc += 1;
@@ -78,14 +79,14 @@ impl Cpu {
             if self.halted {
                 log::trace!("no longer halted due to interrupt being triggered");
                 self.halted = false;
-                cycles_taken += 1;
+                cycles += MCycles(1);
             }
         }
 
-        cycles_taken
+        cycles
     }
 
-    fn fetch_execute(&mut self, mem: &mut Memory) -> usize {
+    fn fetch_execute(&mut self, mem: &mut Memory) -> MCycles {
         let opcode = Opcode(self.fetch8(mem));
 
         log::debug!(
@@ -94,16 +95,14 @@ impl Cpu {
             self.regs.pc - 1
         );
 
-        let cycles_taken = self.execute(opcode, mem);
+        let cycles = self.execute(opcode, mem);
 
-        log::trace!(
-            "executed instruction with opcode {opcode} taking {cycles_taken} machine cycle(s)"
-        );
+        log::trace!("executed instruction with opcode {opcode} in {cycles}");
 
-        cycles_taken
+        cycles
     }
 
-    fn execute(&mut self, opcode: Opcode, mem: &mut Memory) -> usize {
+    fn execute(&mut self, opcode: Opcode, mem: &mut Memory) -> MCycles {
         match opcode.0 {
             // --- 8-BIT LOAD INSTRUCTIONS ---
 
@@ -726,7 +725,7 @@ impl Cpu {
             0xCB => {
                 let suffix = Opcode(self.fetch8(mem));
                 log::trace!("following the 0xCB prefix is {}", suffix);
-                self.execute_cb(suffix, mem)
+                return self.execute_cb(suffix, mem);
             }
 
             0xD3 | 0xDB | 0xDD | 0xE3 | 0xE4 | 0xEB | 0xEC | 0xED | 0xF4 | 0xFC | 0xFD => {
@@ -734,9 +733,10 @@ impl Cpu {
                 1
             }
         }
+        .into()
     }
 
-    fn execute_cb(&mut self, opcode: Opcode, mem: &mut Memory) -> usize {
+    fn execute_cb(&mut self, opcode: Opcode, mem: &mut Memory) -> MCycles {
         match opcode.0 {
             // --- ROTATE AND SHIFT INSTRUCTIONS ---
 
@@ -922,6 +922,7 @@ impl Cpu {
                 4
             }
         }
+        .into()
     }
 
     fn fetch8(&mut self, mem: &Memory) -> u8 {

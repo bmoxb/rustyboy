@@ -22,7 +22,7 @@ macro_rules! test_rom {
 
             // continue executing instructions until enough cycles have passed without any output being produced
             while cycles_since_last_log < CYCLES_WITHOUT_LOG_THRESHOLD {
-                gb.update(0.0);
+                gb.step();
 
                 cycles_since_last_log += 1;
 
