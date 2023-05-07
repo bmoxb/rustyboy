@@ -1,0 +1,8 @@
+[package]
+name = "rustyboy_desktop"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rustyboy_core = { path = "../core" }
+wgpu = "0.16.0"
