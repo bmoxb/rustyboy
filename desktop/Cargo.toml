@@ -5,8 +5,7 @@ edition = "2021"
 
 [dependencies]
 rustyboy_core = { path = "../core" }
-wgpu = "0.16.0"
+pixels = "0.12.1"
 winit = "0.28.5"
-pollster = "0.3.0"
 log = "0.4.17"
 env_logger = "0.10.0"
