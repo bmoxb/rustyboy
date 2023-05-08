@@ -5,3 +5,5 @@ edition = "2021"
 
 [dependencies]
 rustyboy_core = { path = "../core" }
+crossterm = "0.26.1"
+clap = { version = "4.2.7", features = ["derive"] }
