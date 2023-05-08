@@ -31,13 +31,14 @@ impl Emulator {
         let window = WindowBuilder::new()
             .with_title("rustyboy")
             .build(&event_loop)
-            .unwrap();
+            .expect("failed to create window");
 
         let pixels = {
             let window_size = window.inner_size();
             let surface_texture =
                 SurfaceTexture::new(window_size.width, window_size.height, &window);
-            Pixels::new(SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32, surface_texture).unwrap()
+            Pixels::new(SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32, surface_texture)
+                .expect("failed to initialise pixels")
         };
 
         let mbc = mbc::from_rom_file(&args.rom).unwrap();
