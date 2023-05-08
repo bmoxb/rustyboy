@@ -23,7 +23,7 @@ fn main() {
         .build(&event_loop)
         .unwrap();
 
-    let mut pixels = {
+    let pixels = {
         let window_size = window.inner_size();
         let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
         Pixels::new(SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32, surface_texture).unwrap()
@@ -32,96 +32,113 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
     let path = &args[1];
     let mbc = mbc::from_rom_file(path).unwrap();
-    let mut gb = GameBoy::new(mbc);
+    let gb = GameBoy::new(mbc);
 
-    let mut last_instant = Instant::now();
-
-    event_loop.run(move |event, _, control_flow| match event {
-        Event::MainEventsCleared => {
-            update(&mut gb, &window, &mut last_instant);
-        }
-
-        Event::RedrawRequested(window_id) if window_id == window.id() => {
-            draw(&gb, &mut pixels);
-        }
-
-        Event::WindowEvent {
-            ref event,
-            window_id,
-        } if window_id == window.id() => {
-            handle_window_event(&mut gb, &mut pixels, event, control_flow);
-        }
-
-        _ => {}
-    });
+    let emu = Emulator {
+        window,
+        pixels,
+        gb,
+        last_instant: Instant::now(),
+    };
+    emu.run(event_loop)
 }
 
-fn update(gb: &mut GameBoy, window: &Window, last_instant: &mut Instant) {
-    let delta = (Instant::now() - *last_instant).as_secs_f32();
-    *last_instant = Instant::now();
-
-    gb.update(delta);
-
-    window.request_redraw();
+struct Emulator {
+    window: Window,
+    pixels: Pixels,
+    gb: GameBoy,
+    last_instant: Instant,
 }
 
-fn draw(gb: &GameBoy, pixels: &mut Pixels) {
-    for (i, pixel) in pixels.frame_mut().chunks_exact_mut(4).enumerate() {
-        let x = (i % SCREEN_WIDTH) as u8;
-        let y = (i / SCREEN_WIDTH) as u8;
+impl Emulator {
+    fn run(mut self, event_loop: EventLoop<()>) {
+        event_loop.run(move |event, _, control_flow| match event {
+            Event::MainEventsCleared => {
+                self.update();
+            }
 
-        let rgba = match gb.screen().get(x, y) {
-            Colour::Black => [15, 56, 15, 255],
-            Colour::DarkGrey => [48, 98, 48, 255],
-            Colour::LightGrey => [139, 172, 15, 255],
-            Colour::White => [155, 188, 15, 255],
-        };
+            Event::RedrawRequested(window_id) if window_id == self.window.id() => {
+                self.draw();
+            }
 
-        pixel.copy_from_slice(&rgba);
+            Event::WindowEvent {
+                ref event,
+                window_id,
+            } if window_id == self.window.id() => {
+                self.handle_window_event(event, control_flow);
+            }
+
+            _ => {}
+        });
     }
 
-    pixels.render().unwrap();
-}
+    fn update(&mut self) {
+        let delta = (Instant::now() - self.last_instant).as_secs_f32();
+        self.last_instant = Instant::now();
 
-fn handle_window_event(
-    gb: &mut GameBoy,
-    pixels: &mut Pixels,
-    event: &WindowEvent,
-    control_flow: &mut ControlFlow,
-) {
-    match event {
-        WindowEvent::CloseRequested => {
-            *control_flow = ControlFlow::Exit;
-        }
+        self.gb.update(delta);
 
-        WindowEvent::Resized(size) => {
-            pixels.resize_surface(size.width, size.height).unwrap();
-        }
+        self.window.request_redraw();
+    }
 
-        WindowEvent::KeyboardInput {
-            input:
-                KeyboardInput {
-                    virtual_keycode: Some(code),
-                    state,
-                    ..
-                },
-            ..
-        } => {
-            let jp = gb.joypad();
-            let state = matches!(state, ElementState::Pressed);
-            match code {
-                VirtualKeyCode::X => jp.set_button(Button::A, state),
-                VirtualKeyCode::Z => jp.set_button(Button::B, state),
-                VirtualKeyCode::Return => jp.set_button(Button::Start, state),
-                VirtualKeyCode::RShift => jp.set_button(Button::Select, state),
-                VirtualKeyCode::Up => jp.set_button(Button::Up, state),
-                VirtualKeyCode::Down => jp.set_button(Button::Down, state),
-                VirtualKeyCode::Left => jp.set_button(Button::Left, state),
-                VirtualKeyCode::Right => jp.set_button(Button::Right, state),
-                _ => {}
+    fn draw(&mut self) {
+        for (i, pixel) in self.pixels.frame_mut().chunks_exact_mut(4).enumerate() {
+            let x = (i % SCREEN_WIDTH) as u8;
+            let y = (i / SCREEN_WIDTH) as u8;
+
+            let rgba = match self.gb.screen().get(x, y) {
+                Colour::Black => [15, 56, 15, 255],
+                Colour::DarkGrey => [48, 98, 48, 255],
+                Colour::LightGrey => [139, 172, 15, 255],
+                Colour::White => [155, 188, 15, 255],
             };
+
+            pixel.copy_from_slice(&rgba);
         }
 
-        _ => {}
-    };
+        self.pixels.render().unwrap();
+    }
+
+    fn handle_window_event(&mut self, event: &WindowEvent, control_flow: &mut ControlFlow) {
+        match event {
+            WindowEvent::CloseRequested => {
+                *control_flow = ControlFlow::Exit;
+            }
+
+            WindowEvent::Resized(size) => {
+                self.pixels.resize_surface(size.width, size.height).unwrap();
+            }
+
+            WindowEvent::KeyboardInput {
+                input:
+                    KeyboardInput {
+                        virtual_keycode: Some(key),
+                        state,
+                        ..
+                    },
+                ..
+            } => {
+                let down = matches!(state, ElementState::Pressed);
+                self.handle_keyboard_input(key, down);
+            }
+
+            _ => {}
+        };
+    }
+
+    fn handle_keyboard_input(&mut self, key: &VirtualKeyCode, down: bool) {
+        let jp = self.gb.joypad();
+
+        match key {
+            VirtualKeyCode::X => jp.set_button(Button::A, down),
+            VirtualKeyCode::Z => jp.set_button(Button::B, down),
+            VirtualKeyCode::Return => jp.set_button(Button::Start, down),
+            VirtualKeyCode::RShift => jp.set_button(Button::Select, down),
+            VirtualKeyCode::Up => jp.set_button(Button::Up, down),
+            VirtualKeyCode::Down => jp.set_button(Button::Down, down),
+            VirtualKeyCode::Left => jp.set_button(Button::Left, down),
+            VirtualKeyCode::Right => jp.set_button(Button::Right, down),
+            _ => {}
+        };
+    }
 }
