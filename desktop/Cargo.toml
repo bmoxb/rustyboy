@@ -9,3 +9,4 @@ pixels = "0.12.1"
 winit = "0.28.5"
 log = "0.4.17"
 env_logger = "0.10.0"
+clap = { version = "4.2.7", features = ["derive"] }
