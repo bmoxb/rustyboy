@@ -56,22 +56,23 @@ fn terminal_colour_and_character(gb: &GameBoy, term_x: u16, term_y: u16) -> (sty
     let bottom_right = screen.get(gb_x + 1, gb_y + 1);
     let colours = [top_left, top_right, bottom_left, bottom_right];
 
-    let filtered_rgb_values = colours.iter().map(|c| match c {
-        Colour::Black => [15, 56, 15],
-        Colour::DarkGrey => [48u16, 98, 48],
+    let rgb_values = colours.iter().map(|c| match c {
+        Colour::Black => [15u16, 56, 15],
+        Colour::DarkGrey => [48, 98, 48],
         Colour::LightGrey => [139, 172, 15],
         Colour::White => [155, 188, 15],
     });
 
-    let mut interpolated = filtered_rgb_values.fold([0, 0, 0], |mut col, y| {
+    let mut interpolated = rgb_values.fold([0, 0, 0], |mut col, y| {
         for i in 0..3 {
             col[i] += y[i];
         }
         col
     });
-    for i in 0..3 {
-        interpolated[i] /= 3;
+    for x in &mut interpolated {
+        *x /= 4; // 4 pixels represented by each terminal character
     }
+
     let col = style::Color::Rgb {
         r: interpolated[0] as u8,
         g: interpolated[1] as u8,
