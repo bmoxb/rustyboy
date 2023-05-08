@@ -1,13 +1,22 @@
-use crossterm::{cursor, style, terminal, ExecutableCommand, QueueableCommand};
 use rustyboy_core::{
+    joypad::Button,
     mbc,
     screen::{Colour, SCREEN_HEIGHT, SCREEN_WIDTH},
     GameBoy,
 };
 
 use clap::Parser;
+use crossterm::{
+    cursor,
+    event::{self, Event, KeyCode, KeyEvent, KeyEventKind},
+    style, terminal, ExecutableCommand, QueueableCommand,
+};
 
-use std::{io::Write, path::PathBuf, time::Instant};
+use std::{
+    io::Write,
+    path::PathBuf,
+    time::{Duration, Instant},
+};
 
 fn main() -> crossterm::Result<()> {
     let args = Args::parse();
@@ -19,95 +28,97 @@ fn main() -> crossterm::Result<()> {
 
     let mut stdout = std::io::stdout();
 
+    stdout.execute(terminal::Clear(terminal::ClearType::All))?;
+
+    terminal::enable_raw_mode()?;
+
     loop {
         let delta = (Instant::now() - last_instant).as_secs_f32();
         last_instant = Instant::now();
 
         gb.update(delta);
 
-        stdout.execute(terminal::Clear(terminal::ClearType::All))?;
-
-        for term_x in 0..(SCREEN_WIDTH as u16 / 2) {
-            for term_y in 0..(SCREEN_HEIGHT as u16 / 2) {
-                let (col, chr) = terminal_colour_and_character(&gb, term_x, term_y);
+        for x in 0..SCREEN_WIDTH as u8 {
+            for y in 0..SCREEN_HEIGHT as u8 {
+                let col = gb_colour_to_term_colour(gb.screen().get(x, y), args.no_rgb);
 
                 stdout
-                    .queue(cursor::MoveTo(term_x, term_y))?
-                    .queue(style::SetForegroundColor(col))?
-                    .queue(style::Print(chr))?;
+                    .queue(cursor::MoveTo(x as u16, y as u16))?
+                    .queue(style::SetBackgroundColor(col))?
+                    .queue(style::Print(' '))?;
             }
         }
 
         stdout.flush().unwrap();
 
-        std::thread::sleep(std::time::Duration::from_secs_f32(0.1))
+        if event::poll(Duration::from_millis(10))? {
+            match event::read()? {
+                Event::Key(KeyEvent { code, kind, .. }) => {
+                    let down = matches!(kind, KeyEventKind::Press | KeyEventKind::Release);
+                    let jp = gb.joypad();
+
+                    match code {
+                        KeyCode::Char('x') => jp.set_button(Button::A, down),
+                        KeyCode::Char('z') => jp.set_button(Button::B, down),
+                        KeyCode::Enter => jp.set_button(Button::Start, down),
+                        KeyCode::Backspace => jp.set_button(Button::Select, down),
+                        KeyCode::Up => jp.set_button(Button::Up, down),
+                        KeyCode::Down => jp.set_button(Button::Down, down),
+                        KeyCode::Left => jp.set_button(Button::Left, down),
+                        KeyCode::Right => jp.set_button(Button::Right, down),
+                        _ => {}
+                    }
+                }
+
+                Event::Resize(_, _) => {
+                    stdout.execute(terminal::Clear(terminal::ClearType::All))?;
+                }
+
+                _ => {}
+            }
+        }
     }
 }
 
-fn terminal_colour_and_character(gb: &GameBoy, term_x: u16, term_y: u16) -> (style::Color, char) {
-    let screen = gb.screen();
-
-    let gb_x = term_x as u8 * 2;
-    let gb_y = term_y as u8 * 2;
-
-    let top_left = screen.get(gb_x, gb_y);
-    let top_right = screen.get(gb_x + 1, gb_y);
-    let bottom_left = screen.get(gb_x, gb_y + 1);
-    let bottom_right = screen.get(gb_x + 1, gb_y + 1);
-    let colours = [top_left, top_right, bottom_left, bottom_right];
-
-    let rgb_values = colours.iter().map(|c| match c {
-        Colour::Black => [15u16, 56, 15],
-        Colour::DarkGrey => [48, 98, 48],
-        Colour::LightGrey => [139, 172, 15],
-        Colour::White => [155, 188, 15],
-    });
-
-    let mut interpolated = rgb_values.fold([0, 0, 0], |mut col, y| {
-        for i in 0..3 {
-            col[i] += y[i];
+fn gb_colour_to_term_colour(gb_colour: Colour, no_rgb: bool) -> style::Color {
+    if no_rgb {
+        match gb_colour {
+            Colour::Black => style::Color::Black,
+            Colour::DarkGrey => style::Color::DarkGreen,
+            Colour::LightGrey => style::Color::Green,
+            Colour::White => style::Color::White,
         }
-        col
-    });
-    for x in &mut interpolated {
-        *x /= 4; // 4 pixels represented by each terminal character
+    } else {
+        match gb_colour {
+            Colour::Black => style::Color::Rgb {
+                r: 15,
+                g: 56,
+                b: 15,
+            },
+            Colour::DarkGrey => style::Color::Rgb {
+                r: 48,
+                g: 98,
+                b: 48,
+            },
+            Colour::LightGrey => style::Color::Rgb {
+                r: 139,
+                g: 172,
+                b: 15,
+            },
+            Colour::White => style::Color::Rgb {
+                r: 155,
+                g: 188,
+                b: 15,
+            },
+        }
     }
-
-    let col = style::Color::Rgb {
-        r: interpolated[0] as u8,
-        g: interpolated[1] as u8,
-        b: interpolated[2] as u8,
-    };
-
-    let mut blacks: [bool; 4] = [false; 4];
-    for (i, c) in colours.into_iter().enumerate() {
-        blacks[i] = matches!(c, Colour::Black);
-    }
-
-    let chr = match blacks {
-        // tl    tr    bl    br
-        [true, false, false, false] => '▘',
-        [false, true, false, false] => '▝',
-        [false, false, true, false] => '▖',
-        [false, false, false, true] => '▗',
-        [true, false, true, false] => '▌',
-        [false, true, false, true] => '▐',
-        [true, true, false, false] => '▀',
-        [false, false, true, true] => '▄',
-        [true, true, true, false] => '▛',
-        [true, true, false, true] => '▜',
-        [true, false, true, true] => '▙',
-        [false, true, true, true] => '▟',
-        [true, false, false, true] => '▚',
-        [false, true, true, false] => '▞',
-        _ => '█',
-    };
-
-    (col, chr)
 }
 
 #[derive(Parser)]
 pub struct Args {
     /// Path to a Game Boy ROM file to execute
     rom: PathBuf,
+    /// Disable full RGB colours and use a more limited palette
+    #[arg(long, default_value = "false")]
+    no_rgb: bool,
 }
