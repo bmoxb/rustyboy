@@ -3,7 +3,7 @@ use num_derive::FromPrimitive;
 pub const SCREEN_WIDTH: usize = 160;
 pub const SCREEN_HEIGHT: usize = 144;
 
-#[derive(Debug, Clone, Copy, FromPrimitive)]
+#[derive(Debug, Clone, Copy, FromPrimitive, PartialEq, PartialOrd)]
 pub enum Colour {
     White,
     LightGrey,

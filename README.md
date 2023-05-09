@@ -37,7 +37,7 @@ The Cargo workspace feature is used to keep the emulator itself separate from an
 * [ ] Frontends
   * [x] Desktop
   * [ ] Web
-  * [ ] Terminal
+  * [x] Terminal
 
 ## Working Games
 
