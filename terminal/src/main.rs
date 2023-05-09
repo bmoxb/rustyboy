@@ -27,16 +27,20 @@ fn main() -> crossterm::Result<()> {
     let mut stdout = std::io::stdout();
 
     terminal::enable_raw_mode()?;
-    stdout.execute(PushKeyboardEnhancementFlags(
-        KeyboardEnhancementFlags::REPORT_EVENT_TYPES,
-    ))?;
-    stdout.execute(terminal::Clear(terminal::ClearType::All))?;
+    stdout
+        .execute(PushKeyboardEnhancementFlags(
+            KeyboardEnhancementFlags::REPORT_EVENT_TYPES,
+        ))?
+        .execute(terminal::Clear(terminal::ClearType::All))?;
 
     let result = run(&mut stdout, args);
 
     terminal::disable_raw_mode()?;
-    stdout.execute(PopKeyboardEnhancementFlags)?;
-    stdout.execute(terminal::Clear(terminal::ClearType::All))?;
+    stdout
+        .execute(PopKeyboardEnhancementFlags)?
+        .execute(style::SetBackgroundColor(style::Color::Black))?
+        .execute(style::SetForegroundColor(style::Color::White))?
+        .execute(terminal::Clear(terminal::ClearType::All))?;
 
     result
 }
@@ -55,18 +59,19 @@ fn run(stdout: &mut Stdout, args: Args) -> crossterm::Result<()> {
 
         for term_x in 0..SCREEN_WIDTH as u16 {
             for term_y in 0..(SCREEN_HEIGHT / 2) as u16 {
-                let (chr, col) = choose_character_and_colour(gb.screen(), term_x, term_y, &args);
+                let (chr, fg, bg) = choose_character_and_colour(gb.screen(), term_x, term_y, &args);
 
                 stdout
                     .queue(cursor::MoveTo(term_x, term_y))?
-                    .queue(style::SetForegroundColor(col))?
+                    .queue(style::SetForegroundColor(fg))?
+                    .queue(style::SetBackgroundColor(bg))?
                     .queue(style::Print(chr))?;
             }
         }
 
         stdout.flush().unwrap();
 
-        if event::poll(Duration::from_millis(1))? {
+        if event::poll(Duration::from_millis(5))? {
             match event::read()? {
                 Event::Key(KeyEvent { code, kind, .. }) => {
                     let down = !matches!(kind, KeyEventKind::Release);
@@ -102,71 +107,83 @@ fn choose_character_and_colour(
     term_x: u16,
     term_y: u16,
     args: &Args,
-) -> (char, style::Color) {
+) -> (char, style::Color, style::Color) {
     let up = screen.get(term_x as u8, term_y as u8 * 2);
     let down = screen.get(term_x as u8, term_y as u8 * 2 + 1);
 
-    let up_black = matches!(up, Colour::Black);
-    let down_black = matches!(down, Colour::Black);
-
     let chr = if args.no_unicode {
-        match (up_black, down_black) {
-            (true, true) => ' ',
-            (true, false) => 'v',
-            (false, true) => '^',
-            (false, false) => '#',
-        }
+        colours_to_ascii(up, down)
     } else {
-        match (up_black, down_black) {
-            (true, true) => ' ',
-            (true, false) => '▄',
-            (false, true) => '▀',
-            (false, false) => '█',
-        }
+        colours_to_unicode(up, down)
     };
 
-    let gb_col = match (up, down) {
-        (Colour::Black, _) => down,
-        (_, Colour::Black) => up,
-        (Colour::DarkGrey, Colour::White) | (Colour::White, Colour::DarkGrey) => Colour::LightGrey,
-        (Colour::White, _) | (_, Colour::White) => Colour::White,
-        (Colour::LightGrey, _) | (_, Colour::LightGrey) => Colour::LightGrey,
-        _ => Colour::DarkGrey,
-    };
-
-    let col = if args.no_rgb {
-        match gb_col {
-            Colour::Black => style::Color::Black,
-            Colour::DarkGrey => style::Color::DarkGreen,
-            Colour::LightGrey => style::Color::Green,
-            Colour::White => style::Color::White,
-        }
+    let (up_col, down_col) = if args.no_rgb {
+        (gb_colour_to_term_colour(up), gb_colour_to_term_colour(down))
     } else {
-        match gb_col {
-            Colour::Black => style::Color::Rgb {
-                r: 15,
-                g: 56,
-                b: 15,
-            },
-            Colour::DarkGrey => style::Color::Rgb {
-                r: 48,
-                g: 98,
-                b: 48,
-            },
-            Colour::LightGrey => style::Color::Rgb {
-                r: 139,
-                g: 172,
-                b: 15,
-            },
-            Colour::White => style::Color::Rgb {
-                r: 155,
-                g: 188,
-                b: 15,
-            },
-        }
+        (gb_colour_to_rgb_colour(up), gb_colour_to_rgb_colour(down))
     };
 
-    (chr, col)
+    let (fg, bg) = if up > down {
+        (down_col, up_col)
+    } else {
+        (up_col, down_col)
+    };
+
+    (chr, fg, bg)
+}
+
+fn colours_to_ascii(up: Colour, down: Colour) -> char {
+    if up == down {
+        ' '
+    } else if up > down {
+        'v'
+    } else {
+        '^'
+    }
+}
+
+fn colours_to_unicode(up: Colour, down: Colour) -> char {
+    if up == down {
+        '█'
+    } else if up > down {
+        '▄'
+    } else {
+        '▀'
+    }
+}
+
+fn gb_colour_to_term_colour(c: Colour) -> style::Color {
+    match c {
+        Colour::Black => style::Color::Black,
+        Colour::DarkGrey => style::Color::DarkGreen,
+        Colour::LightGrey => style::Color::Green,
+        Colour::White => style::Color::White,
+    }
+}
+
+fn gb_colour_to_rgb_colour(c: Colour) -> style::Color {
+    match c {
+        Colour::Black => style::Color::Rgb {
+            r: 15,
+            g: 56,
+            b: 15,
+        },
+        Colour::DarkGrey => style::Color::Rgb {
+            r: 48,
+            g: 98,
+            b: 48,
+        },
+        Colour::LightGrey => style::Color::Rgb {
+            r: 139,
+            g: 172,
+            b: 15,
+        },
+        Colour::White => style::Color::Rgb {
+            r: 155,
+            g: 188,
+            b: 15,
+        },
+    }
 }
 
 #[derive(Parser)]
