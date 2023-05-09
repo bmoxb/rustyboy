@@ -8,7 +8,10 @@ use rustyboy_core::{
 use clap::Parser;
 use crossterm::{
     cursor,
-    event::{self, Event, KeyCode, KeyEvent, KeyEventKind},
+    event::{
+        self, Event, KeyCode, KeyEvent, KeyEventKind, KeyboardEnhancementFlags,
+        PushKeyboardEnhancementFlags,
+    },
     style, terminal, ExecutableCommand, QueueableCommand,
 };
 
@@ -31,6 +34,9 @@ fn main() -> crossterm::Result<()> {
     stdout.execute(terminal::Clear(terminal::ClearType::All))?;
 
     terminal::enable_raw_mode()?;
+    stdout.execute(PushKeyboardEnhancementFlags(
+        KeyboardEnhancementFlags::REPORT_EVENT_TYPES,
+    ))?;
 
     loop {
         let delta = (Instant::now() - last_instant).as_secs_f32();
@@ -49,19 +55,21 @@ fn main() -> crossterm::Result<()> {
             }
         }
 
-        stdout.flush().unwrap();
-
-        if event::poll(Duration::from_millis(10))? {
+        if event::poll(Duration::from_millis(1))? {
             match event::read()? {
                 Event::Key(KeyEvent { code, kind, .. }) => {
-                    let down = matches!(kind, KeyEventKind::Press | KeyEventKind::Release);
+                    let down = !matches!(kind, KeyEventKind::Release);
                     let jp = gb.joypad();
+
+                    stdout
+                        .queue(cursor::MoveTo(SCREEN_WIDTH as u16 + 2, 30))?
+                        .queue(style::Print(format!("{:?}, {:?}     ", code, kind)))?;
 
                     match code {
                         KeyCode::Char('x') => jp.set_button(Button::A, down),
                         KeyCode::Char('z') => jp.set_button(Button::B, down),
-                        KeyCode::Enter => jp.set_button(Button::Start, down),
-                        KeyCode::Backspace => jp.set_button(Button::Select, down),
+                        KeyCode::Char('s') => jp.set_button(Button::Start, down),
+                        KeyCode::Char('a') => jp.set_button(Button::Select, down),
                         KeyCode::Up => jp.set_button(Button::Up, down),
                         KeyCode::Down => jp.set_button(Button::Down, down),
                         KeyCode::Left => jp.set_button(Button::Left, down),
@@ -77,6 +85,8 @@ fn main() -> crossterm::Result<()> {
                 _ => {}
             }
         }
+
+        stdout.flush().unwrap();
     }
 }
 
