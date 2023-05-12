@@ -225,7 +225,7 @@ impl Gpu {
                     if sprite.x >= 8 && colour_id != 0 {
                         let colour = palette.colour_for_id(colour_id);
                         self.screen.set(
-                            sprite.x + horizontal_offset as u8 - 8,
+                            sprite.x.saturating_add(horizontal_offset as u8) - 8,
                             sprite.y + sprite_line - 16,
                             colour,
                         );
