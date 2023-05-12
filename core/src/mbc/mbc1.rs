@@ -1,75 +1,48 @@
 use std::cmp;
 
+use crate::bits::get_bits;
+use crate::cartridge::Cartridge;
+
 pub struct MBC1 {
-    rom: Vec<u8>,
-    ram: Vec<u8>,
-    rom_bank: u8,
-    ram_bank: u8,
+    cart: Cartridge,
+    // Whether RAM is enabled or not (set by writing in range 0x000-0x1FFF).
     ram_enable: bool,
-    expansion_mode: bool,
+    // The current ROM bank (this variable merges the two separate 5-bit and 2-bit registers).
+    rom_bank: u8,
 }
 
 impl MBC1 {
-    #[allow(dead_code)]
-    pub fn new(data: &[u8]) -> Self {
-        let ram_banks = data[super::RAM_SIZE as usize];
-        let ram_size = ram_banks as usize * 0x2000;
-
+    pub fn new(cart: Cartridge, _has_ram: bool, _has_battery: bool) -> Self {
         MBC1 {
-            rom: data.to_vec(),
-            ram: vec![0; ram_size],
-            rom_bank: 1,
-            ram_bank: 0,
+            cart,
             ram_enable: false,
-            expansion_mode: false,
+            rom_bank: 1,
         }
     }
 }
 
 impl super::MemoryBankController for MBC1 {
-    fn mbc_name(&self) -> &str {
-        "MBC1"
-    }
-
     fn read8(&self, addr: u16) -> u8 {
         match addr {
-            0x0000..=0x3FFF => self.rom[addr as usize],
-            0x4000..=0x7FFF => self.rom[(self.rom_bank as usize * 0x4000) + addr as usize],
-            0xA000..=0xBFFF => {
-                if self.ram_enable {
-                    self.ram[(self.ram_bank as usize * 0x2000) + addr as usize]
-                } else {
-                    0xFF
-                }
-            }
+            0x0000..=0x3FFF => self.cart.read8(addr),
+            0x4000..=0x7FFF => self
+                .cart
+                .read8((self.rom_bank as u16 * 0x4000) + addr - 0x4000),
+            0xA000..=0xBFFF => 0,
             _ => 0,
         }
     }
 
     fn write8(&mut self, addr: u16, value: u8) {
         match addr {
-            0x0000..=0x1FFF => self.ram_enable = (value & 0x0F) == 0x0A,
+            0x0000..=0x1FFF => self.ram_enable = get_bits(value, 0, 5) == 0xA, // lower 4 bits set to 0xA enables RAM
             0x2000..=0x3FFF => {
-                // the two high bits of the ROM bank number are set in the 0x400..=0x5FFF range so we need to avoid
-                // altering them here
-                let two_high_bits = self.rom_bank & 0x60;
-
-                self.rom_bank = two_high_bits + cmp::max(1, value & 0x1F); // discard the 3 most significant bits
+                let value = get_bits(value, 0, 6); // only lowest 5 bits can be modified here
+                self.rom_bank = cmp::min(value, 1); // cannot be set to 0
             }
-            0x4000..=0x5FFF => {
-                if self.expansion_mode {
-                    self.ram_bank = value & 0b11;
-                } else {
-                    let five_low_bits = self.rom_bank & 0x1F; // TODO: use get_bits
-                    self.rom_bank = five_low_bits + ((value & 0b11) << 5);
-                }
-            }
-            0x6000..=0x7FFF => self.expansion_mode = value != 0,
-            0xA000..=0xBFFF => {
-                if self.ram_enable {
-                    self.ram[(self.ram_bank as usize * 0x2000) + addr as usize] = value;
-                }
-            }
+            0x4000..=0x5FFF => {}
+            0x6000..=0x7FFF => {}
+            0xA000..=0xBFFF => {}
             _ => {}
         }
     }

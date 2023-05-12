@@ -1,12 +1,16 @@
 use std::env;
 use std::fs::File;
 
+use rustyboy_core::{cartridge::Cartridge, mbc, GameBoy};
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
     if let [_, rom_path, log_path] = &args[..] {
-        let mbc = rustyboy_core::mbc::from_rom_file(rom_path).unwrap();
-        let mut gb = rustyboy_core::GameBoy::new(mbc);
+        let cart = Cartridge::from_file(rom_path).unwrap();
+        let mbc = mbc::from_cartridge(cart).unwrap();
+
+        let mut gb = GameBoy::new(mbc);
 
         let file = File::create(log_path).unwrap();
         gb.enable_gb_doctor_logging(Box::new(file));

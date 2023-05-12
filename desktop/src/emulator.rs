@@ -4,6 +4,7 @@ use std::{fs::File, time::Instant};
 
 use pixels::{Pixels, SurfaceTexture};
 use rustyboy_core::{
+    cartridge::Cartridge,
     joypad::Button,
     mbc,
     screen::{Colour, SCREEN_HEIGHT, SCREEN_WIDTH},
@@ -41,7 +42,10 @@ impl Emulator {
                 .expect("failed to initialise pixels")
         };
 
-        let mbc = mbc::from_rom_file(&args.rom).unwrap();
+        let cart = Cartridge::from_file(&args.rom).unwrap();
+        println!("Loaded cartridge: {}", cart);
+
+        let mbc = mbc::from_cartridge(cart).unwrap();
 
         let mut gb = GameBoy::new(mbc);
 

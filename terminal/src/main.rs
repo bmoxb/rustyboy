@@ -1,4 +1,5 @@
 use rustyboy_core::{
+    cartridge::Cartridge,
     joypad::Button,
     mbc,
     screen::{Colour, SCREEN_HEIGHT, SCREEN_WIDTH},
@@ -24,7 +25,9 @@ use std::{
 fn main() -> crossterm::Result<()> {
     let args = Args::parse();
 
-    let mbc = mbc::from_rom_file(&args.rom).unwrap();
+    let cart = Cartridge::from_file(&args.rom).unwrap();
+    let mbc = mbc::from_cartridge(cart).unwrap();
+
     let gb = GameBoy::new(mbc);
 
     terminal::enable_raw_mode()?;

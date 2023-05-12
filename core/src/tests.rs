@@ -13,7 +13,8 @@ macro_rules! test_rom {
                 "/../gb-test-roms/",
                 $file
             ));
-            let mbc = mbc::from_rom_data(rom);
+            let cart = cartridge::Cartridge::from_data(rom.to_vec());
+            let mbc = mbc::from_cartridge(cart).unwrap();
 
             let mut gb = GameBoy::new(mbc);
 

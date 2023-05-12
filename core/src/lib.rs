@@ -2,6 +2,7 @@
 mod tests;
 
 mod bits;
+pub mod cartridge;
 mod cpu;
 mod cycles;
 mod gpu;
