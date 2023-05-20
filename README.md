@@ -33,6 +33,7 @@ The Cargo workspace feature is used to keep the emulator itself separate from an
   * [ ] Background scolling
   * [ ] Draw window
   * [x] Draw sprites
+  * [x] Handle flipped sprites
   * [ ] Handle 8x16 sprites
 * [ ] Frontends
   * [x] Desktop

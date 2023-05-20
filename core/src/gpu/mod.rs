@@ -14,7 +14,7 @@ use crate::screen::{Screen, SCREEN_WIDTH};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
-use self::oam::SPRITE_COUNT;
+use self::oam::{Sprite, SPRITE_COUNT};
 
 const HBLANK_PERIOD: TCycles = TCycles(204);
 const VBLANK_PERIOD: TCycles = TCycles(456); // single line
@@ -204,39 +204,52 @@ impl Gpu {
         for index in 0..SPRITE_COUNT {
             let sprite = self.oam.read_sprite(index);
 
+            // determine whether the sprite falls within the scanline currently being drawn
             let low = sprite.y.saturating_sub(16);
             let high = sprite.y.saturating_sub(16 - TILE_WIDTH as u8);
             let scanline_in_sprite_bounds = (low..high).contains(&self.lcd_y);
 
             if scanline_in_sprite_bounds {
-                let sprite_line = self.lcd_y + 16 - sprite.y;
-
-                let colour_ids = self
-                    .vram
-                    .read_tile_line_unsigned_index(sprite.tile_index, sprite_line);
-
-                let palette = if sprite.use_palette_1 {
-                    &self.obj_palette_1_data
-                } else {
-                    &self.obj_palette_0_data
-                };
-
-                for (horizontal_offset, colour_id) in colour_ids.into_iter().enumerate() {
-                    if sprite.x >= 8 && colour_id != 0 {
-                        let colour = palette.colour_for_id(colour_id);
-                        self.screen.set(
-                            sprite.x + horizontal_offset as u8 - 8,
-                            sprite.y + sprite_line - 16,
-                            colour,
-                        );
-                    }
-                }
-
+                self.draw_sprite_scanline(&sprite);
                 sprites_drawn += 1;
-            }
 
-            if sprites_drawn >= 10 {
-                break;
+                // hardware limitations mean only 10 sprites can drawn in any one scanline
+                if sprites_drawn >= 10 {
+                    break;
+                }
+            }
+        }
+    }
+
+    fn draw_sprite_scanline(&mut self, sprite: &Sprite) {
+        let sprite_line = if sprite.y_flip {
+            (sprite.y + TILE_WIDTH as u8) - (self.lcd_y + 16) - 1
+        } else {
+            self.lcd_y + 16 - sprite.y
+        };
+
+        let mut colour_ids = self
+            .vram
+            .read_tile_line_unsigned_index(sprite.tile_index, sprite_line);
+
+        let palette = if sprite.use_palette_1 {
+            &self.obj_palette_1_data
+        } else {
+            &self.obj_palette_0_data
+        };
+
+        if sprite.x_flip {
+            colour_ids.reverse();
+        };
+
+        for (horizontal_offset, colour_id) in colour_ids.into_iter().enumerate() {
+            if sprite.x >= 8 && colour_id != 0 {
+                let colour = palette.colour_for_id(colour_id);
+                self.screen.set(
+                    sprite.x.saturating_add(horizontal_offset as u8) - 8,
+                    self.lcd_y,
+                    colour,
+                );
             }
         }
     }
