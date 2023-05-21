@@ -11,7 +11,12 @@ pub async fn run() {
 
     let args = Args::parse();
 
-    let cart = Cartridge::from_file(&args.rom).unwrap();
+    let rom_path = args
+        .rom
+        .or_else(|| rfd::FileDialog::new().pick_file())
+        .unwrap();
+
+    let cart = Cartridge::from_file(rom_path).unwrap();
     println!("Loaded cartridge: {}", cart);
 
     let mbc = mbc::from_cartridge(cart).unwrap();
@@ -54,7 +59,7 @@ impl Timer {
 #[derive(Parser)]
 pub struct Args {
     /// Path to a Game Boy ROM file to execute
-    rom: PathBuf,
+    rom: Option<PathBuf>,
     // Speed multiplier at which to run the emulator
     #[arg(short, long, default_value = "1.0")]
     speed: f32,
