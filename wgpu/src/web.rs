@@ -11,16 +11,25 @@ use winit::{dpi::LogicalSize, platform::web::WindowExtWebSys, window::Window};
 pub async fn run() {
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
 
-    let cart = Cartridge::from_data(include_bytes!("/home/max/Downloads/Tetris.gb").to_vec());
-    let mbc = mbc::from_cartridge(cart).unwrap();
-    let gb = GameBoy::new(mbc);
+    if let Some(file) = rfd::AsyncFileDialog::new().pick_file().await {
+        let cart = Cartridge::from_data(file.read().await);
+        let mbc = mbc::from_cartridge(cart).unwrap();
+        let gb = GameBoy::new(mbc);
 
-    Emulator::new(gb, 1.0).await.run();
+        Emulator::new(gb, 1.0).await.run();
+    }
 }
 
-#[derive(Default)]
 pub struct Timer {
     last_instant: f64,
+}
+
+impl Default for Timer {
+    fn default() -> Self {
+        Timer {
+            last_instant: js_sys::Date::now() / 1000.0,
+        }
+    }
 }
 
 impl Timer {
@@ -35,7 +44,7 @@ impl Timer {
 pub fn window_setup(window: Rc<Window>) {
     window.set_inner_size(get_client_window_size());
 
-    let web_window = web_sys::window().unwrap();
+    let web_window = web_sys::window().expect("failed to get DOM window");
 
     web_window
         .document()

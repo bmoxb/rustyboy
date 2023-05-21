@@ -1,5 +1,5 @@
 [package]
-name = "rustyboy_desktop"
+name = "rustyboy_wgpu"
 version = "0.1.0"
 edition = "2021"
 
@@ -14,6 +14,7 @@ wasm-bindgen = "0.2.86"
 console_error_panic_hook = "0.1.7"
 web-sys = "0.3.63"
 js-sys = "0.3.63"
+rfd = "0.11.4"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 pollster = "0.2.4"

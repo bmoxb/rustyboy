@@ -6,7 +6,6 @@ use clap::Parser;
 
 use rustyboy_core::{cartridge::Cartridge, mbc, GameBoy};
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn run() {
     env_logger::init();
 
