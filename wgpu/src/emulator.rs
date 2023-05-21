@@ -1,12 +1,10 @@
-use super::Args;
+use crate::Timer;
 
-use std::{fs::File, time::Instant};
+use std::rc::Rc;
 
 use pixels::{Pixels, SurfaceTexture};
 use rustyboy_core::{
-    cartridge::Cartridge,
     joypad::Button,
-    mbc,
     screen::{Colour, SCREEN_HEIGHT, SCREEN_WIDTH},
     GameBoy,
 };
@@ -17,54 +15,44 @@ use winit::{
 };
 
 pub struct Emulator {
-    args: Args,
-    event_loop: Option<EventLoop<()>>,
-    window: Window,
-    pixels: Pixels,
     gb: GameBoy,
-    last_instant: Instant,
+    event_loop: Option<EventLoop<()>>,
+    window: Rc<Window>,
+    pixels: Pixels,
+    timer: Timer,
+    emulation_speed: f32,
 }
 
 impl Emulator {
-    pub fn new(args: Args) -> Self {
+    pub async fn new(gb: GameBoy, emulation_speed: f32) -> Self {
         let event_loop = EventLoop::new();
 
-        let window = WindowBuilder::new()
-            .with_title("rustyboy")
-            .build(&event_loop)
-            .expect("failed to create window");
+        let window = Rc::new(
+            WindowBuilder::new()
+                .with_title("rustyboy")
+                .build(&event_loop)
+                .expect("failed to create window"),
+        );
+
+        #[cfg(target_arch = "wasm32")]
+        crate::web::window_setup(Rc::clone(&window));
 
         let pixels = {
             let window_size = window.inner_size();
             let surface_texture =
-                SurfaceTexture::new(window_size.width, window_size.height, &window);
-            Pixels::new(SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32, surface_texture)
+                SurfaceTexture::new(window_size.width, window_size.height, window.as_ref());
+            Pixels::new_async(SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32, surface_texture)
+                .await
                 .expect("failed to initialise pixels")
         };
 
-        let cart = Cartridge::from_file(&args.rom).unwrap();
-        println!("Loaded cartridge: {}", cart);
-
-        let mbc = mbc::from_cartridge(cart).unwrap();
-
-        let mut gb = GameBoy::new(mbc);
-
-        if let Some(path) = &args.gb_doctor_log {
-            let f = File::create(path).unwrap();
-            gb.enable_gb_doctor_logging(Box::new(f));
-        }
-
-        if let Some(_path) = &args.serial_log {
-            unimplemented!() // TODO
-        }
-
         Emulator {
-            args,
+            gb,
             event_loop: Some(event_loop),
             window,
             pixels,
-            gb,
-            last_instant: Instant::now(),
+            timer: Timer::default(),
+            emulation_speed,
         }
     }
 
@@ -92,10 +80,9 @@ impl Emulator {
     }
 
     fn update(&mut self) {
-        let delta = (Instant::now() - self.last_instant).as_secs_f32();
-        self.last_instant = Instant::now();
+        let delta = self.timer.delta();
 
-        self.gb.update(delta * self.args.speed);
+        self.gb.update(delta * self.emulation_speed);
 
         self.window.request_redraw();
     }

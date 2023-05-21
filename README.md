@@ -8,8 +8,7 @@ The Cargo workspace feature is used to keep the emulator itself separate from an
 
 ## Emulator Frontends
 
-* `desktop/` - Targets desktop platforms (Linux, Mac, Windows) via [pixels](https://github.com/parasyte/pixels).
-* `web/` - Run in all major web browsers by utilising the [Canvas API](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API) and compling to WASM.
+* `wgpu/` - Targets desktop platforms (Linux, Mac, Windows) and the browser (WASM + WebGPU) via [pixels](https://github.com/parasyte/pixels).
 * `terminal/` - Execute the emulator inside a terminal with the Game Boy display expressed with a grid of Unicode characters.
 * `gbdoctor/` - Run the emulator without a display and the CPU state logged in the format expected by the [Game Boy Doctor](https://robertheaton.com/gameboy-doctor/) tool. This frontend exists for development and testing purposes.
 
@@ -35,9 +34,9 @@ The Cargo workspace feature is used to keep the emulator itself separate from an
   * [x] Draw sprites
   * [x] Handle flipped sprites
   * [ ] Handle 8x16 sprites
-* [ ] Frontends
+* [x] Frontends
   * [x] Desktop
-  * [ ] Web
+  * [x] Web
   * [x] Terminal
 
 ## Working Games
