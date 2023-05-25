@@ -6,7 +6,7 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     steps:
-      - run: sudo apt install -y libgtk-3-dev
+      - run: sudo apt update && sudo apt install -y libgtk-3-dev
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
@@ -21,7 +21,7 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     steps:
-      - run: sudo apt install -y libgtk-3-dev
+      - run: sudo apt update && sudo apt install -y libgtk-3-dev
       - uses: actions/checkout@v2
         with:
           submodules: recursive
@@ -54,7 +54,7 @@ jobs:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
-      - run: sudo apt install -y libgtk-3-dev
+      - run: sudo apt update && sudo apt install -y libgtk-3-dev
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
