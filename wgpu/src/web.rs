@@ -20,27 +20,6 @@ pub async fn run() {
     }
 }
 
-pub struct Timer {
-    last_instant: f64,
-}
-
-impl Default for Timer {
-    fn default() -> Self {
-        Timer {
-            last_instant: js_sys::Date::now() / 1000.0,
-        }
-    }
-}
-
-impl Timer {
-    pub fn delta(&mut self) -> f32 {
-        let now = js_sys::Date::now() / 1000.0;
-        let delta = now - self.last_instant;
-        self.last_instant = now;
-        delta as f32
-    }
-}
-
 pub fn window_setup(window: Rc<Window>) {
     window.set_inner_size(get_client_window_size());
 

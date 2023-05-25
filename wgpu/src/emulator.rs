@@ -1,7 +1,6 @@
-use crate::Timer;
-
 use std::rc::Rc;
 
+use instant::Instant;
 use pixels::{Pixels, SurfaceTexture};
 use rustyboy_core::{
     joypad::Button,
@@ -51,7 +50,9 @@ impl Emulator {
             event_loop: Some(event_loop),
             window,
             pixels,
-            timer: Timer::default(),
+            timer: Timer {
+                last_instant: Instant::now(),
+            },
             emulation_speed,
         }
     }
@@ -146,5 +147,18 @@ impl Emulator {
             VirtualKeyCode::Right => jp.set_button(Button::Right, down),
             _ => {}
         };
+    }
+}
+
+struct Timer {
+    last_instant: Instant,
+}
+
+impl Timer {
+    fn delta(&mut self) -> f32 {
+        let now = Instant::now();
+        let delta = (now - self.last_instant).as_secs_f32();
+        self.last_instant = now;
+        delta
     }
 }

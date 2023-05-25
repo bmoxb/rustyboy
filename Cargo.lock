@@ -1690,6 +1690,7 @@ dependencies = [
  "clap",
  "console_error_panic_hook",
  "env_logger",
+ "instant",
  "js-sys",
  "pixels",
  "pollster",

@@ -1,6 +1,6 @@
 use crate::emulator::Emulator;
 
-use std::{fs::File, path::PathBuf, time::Instant};
+use std::{fs::File, path::PathBuf};
 
 use clap::Parser;
 
@@ -33,27 +33,6 @@ pub async fn run() {
     }
 
     Emulator::new(gb, args.speed).await.run();
-}
-
-pub struct Timer {
-    last_instant: Instant,
-}
-
-impl Default for Timer {
-    fn default() -> Self {
-        Timer {
-            last_instant: Instant::now(),
-        }
-    }
-}
-
-impl Timer {
-    pub fn delta(&mut self) -> f32 {
-        let now = Instant::now();
-        let delta = (now - self.last_instant).as_secs_f32();
-        self.last_instant = now;
-        delta
-    }
 }
 
 #[derive(Parser)]

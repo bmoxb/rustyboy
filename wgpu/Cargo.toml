@@ -8,6 +8,7 @@ rustyboy_core = { path = "../core" }
 pixels = "0.12.1"
 winit = "0.28.5"
 rfd = "0.11.4"
+instant = "0.1.12"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures = "0.4.36"
