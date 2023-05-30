@@ -30,7 +30,7 @@ impl VideoRam {
         self.data[(addr - VRAM_START) as usize] = value;
     }
 
-    // Read a tile at the given index in the memory area 0x8000 to 0x87FF using an unsigned offset.
+    /// Read a tile at the given index in the memory area 0x8000 to 0x87FF using an unsigned offset.
     pub fn read_tile_line_unsigned_index(&self, offset: u8, line: u8) -> [u8; TILE_WIDTH] {
         debug_assert!((line as usize) < TILE_WIDTH);
 
@@ -39,8 +39,8 @@ impl VideoRam {
         self.read_tile_line(addr + (line as u16 * 2))
     }
 
-    // Read a tile at the given index in the memory area 0x8800 to 0x8FFF using a signed offset. This method may be used
-    // over [`read_tile_unsigned_index`] for drawing the background or window when LCD control bit 4 is not set.
+    /// Read a tile at the given index in the memory area 0x8800 to 0x8FFF using a signed offset. This method may be
+    /// used over [`read_tile_unsigned_index`] for drawing the background or window when LCD control bit 4 is not set.
     pub fn read_tile_line_signed_index(&self, offset: u8, line: u8) -> [u8; TILE_WIDTH] {
         debug_assert!((line as usize) < TILE_WIDTH);
 

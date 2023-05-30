@@ -5,31 +5,31 @@ use crate::bits::{get_bit, modify_bit};
 
 use super::Flags;
 
-// 8-bit increase - affects zero, subtraction, and half carry flags.
+/// 8-bit increase - affects zero, subtraction, and half carry flags.
 pub fn inc8(flags: &mut Flags, x: u8) -> u8 {
     let result = x.wrapping_add(1);
     set_zero_subtraction_half_carry_add(flags, result, x, 1, 0);
     result
 }
 
-// 16-bit increase - affects no flags.
+/// 16-bit increase - affects no flags.
 pub fn inc16(x: u16) -> u16 {
     x.wrapping_add(1)
 }
 
-// 8-bit decrease - affects zero, subtraction, an half carry flags.
+/// 8-bit decrease - affects zero, subtraction, an half carry flags.
 pub fn dec8(flags: &mut Flags, x: u8) -> u8 {
     let result = x.wrapping_sub(1);
     set_zero_subtraction_half_carry_sub(flags, result, x, 1, 0);
     result
 }
 
-// 16-bit decrease - affects no flags.
+/// 16-bit decrease - affects no flags.
 pub fn dec16(x: u16) -> u16 {
     x.wrapping_sub(1)
 }
 
-// 8-bit addition - affects all flags.
+/// 8-bit addition - affects all flags.
 pub fn add8(flags: &mut Flags, x: u8, y: u8) -> u8 {
     let (result, carry) = x.overflowing_add(y);
 
@@ -39,7 +39,7 @@ pub fn add8(flags: &mut Flags, x: u8, y: u8) -> u8 {
     result
 }
 
-// 8-bit addition with carry - affects all flags.
+/// 8-bit addition with carry - affects all flags.
 pub fn adc8(flags: &mut Flags, x: u8, y: u8) -> u8 {
     let c = flags.carry() as u8;
     let result = x.wrapping_add(y).wrapping_add(c);
@@ -50,7 +50,7 @@ pub fn adc8(flags: &mut Flags, x: u8, y: u8) -> u8 {
     result
 }
 
-// 8-bit subtraction - affects all flags.
+/// 8-bit subtraction - affects all flags.
 pub fn sub8(flags: &mut Flags, x: u8, y: u8) -> u8 {
     let (result, carry) = x.overflowing_sub(y);
 
@@ -60,7 +60,7 @@ pub fn sub8(flags: &mut Flags, x: u8, y: u8) -> u8 {
     result
 }
 
-// 8-bit subtraction with carry - affects all flags.
+/// 8-bit subtraction with carry - affects all flags.
 pub fn sbc8(flags: &mut Flags, x: u8, y: u8) -> u8 {
     let c = flags.carry() as u8;
     let result = x.wrapping_sub(y).wrapping_sub(c);
@@ -71,7 +71,7 @@ pub fn sbc8(flags: &mut Flags, x: u8, y: u8) -> u8 {
     result
 }
 
-// 16-bit addition - affects subtraction, half carry, and carry flags.
+/// 16-bit addition - affects subtraction, half carry, and carry flags.
 pub fn add16(flags: &mut Flags, x: u16, y: u16) -> u16 {
     let (result, carry) = x.overflowing_add(y);
 
@@ -82,8 +82,8 @@ pub fn add16(flags: &mut Flags, x: u16, y: u16) -> u16 {
     result
 }
 
-// 16-bit addition except half-carry occurs at bit 3 and the zero flag is set - affects all flags.
-// https://stackoverflow.com/questions/57958631/game-boy-half-carry-flag-and-16-bit-instructions-especially-opcode-0xe8
+/// 16-bit addition except half-carry occurs at bit 3 and the zero flag is set - affects all flags.
+/// https://stackoverflow.com/questions/57958631/game-boy-half-carry-flag-and-16-bit-instructions-especially-opcode-0xe8
 pub fn add16_with_signed_byte_operand(flags: &mut Flags, x: u16, y: u8) -> u16 {
     let y = y as i8 as i16 as u16;
 
@@ -95,35 +95,35 @@ pub fn add16_with_signed_byte_operand(flags: &mut Flags, x: u16, y: u8) -> u16 {
     x.wrapping_add(y)
 }
 
-// Bitwise 'and' operation (x & y) - affects all flags.
+/// Bitwise 'and' operation (x & y) - affects all flags.
 pub fn bitwise_and(flags: &mut Flags, x: u8, y: u8) -> u8 {
     let result = x & y;
     set_bitwise_flags(flags, result, true);
     result
 }
 
-// Bitwise 'or' operation (x | y) - affects all flags.
+/// Bitwise 'or' operation (x | y) - affects all flags.
 pub fn bitwise_or(flags: &mut Flags, x: u8, y: u8) -> u8 {
     let result = x | y;
     set_bitwise_flags(flags, result, false);
     result
 }
 
-// Bitwise 'exclusive or' operation (x ^ y) - affects all flags.
+/// Bitwise 'exclusive or' operation (x ^ y) - affects all flags.
 pub fn bitwise_xor(flags: &mut Flags, x: u8, y: u8) -> u8 {
     let result = x ^ y;
     set_bitwise_flags(flags, result, false);
     result
 }
 
-// Bitwise 'not'/complement (!x) - affects subtraction, and half carry flags.
+/// Bitwise 'not'/complement (!x) - affects subtraction, and half carry flags.
 pub fn bitwise_not(flags: &mut Flags, x: u8) -> u8 {
     flags.set_subtraction(true);
     flags.set_half_carry(true);
     !x
 }
 
-// Rotate left - affects all flags.
+/// Rotate left - affects all flags.
 pub fn rotate_left(flags: &mut Flags, x: u8) -> u8 {
     let carry_bit = get_bit(x, 7);
 
@@ -135,7 +135,7 @@ pub fn rotate_left(flags: &mut Flags, x: u8) -> u8 {
     shifted
 }
 
-// Rotate left using the carry flag as the new least-significant bit - affects all flags.
+/// Rotate left using the carry flag as the new least-significant bit - affects all flags.
 pub fn rotate_left_through_carry_flag(flags: &mut Flags, x: u8) -> u8 {
     let carry_bit = get_bit(x, 7);
 
@@ -147,7 +147,7 @@ pub fn rotate_left_through_carry_flag(flags: &mut Flags, x: u8) -> u8 {
     shifted
 }
 
-// Shift left - affects all flags.
+/// Shift left - affects all flags.
 pub fn shift_left(flags: &mut Flags, x: u8) -> u8 {
     let carry_bit = get_bit(x, 7);
     let shifted = x << 1;
@@ -155,7 +155,7 @@ pub fn shift_left(flags: &mut Flags, x: u8) -> u8 {
     shifted
 }
 
-// Rotate right - affects all flags.
+/// Rotate right - affects all flags.
 pub fn rotate_right(flags: &mut Flags, x: u8) -> u8 {
     let carry_bit = get_bit(x, 0);
 
@@ -167,7 +167,7 @@ pub fn rotate_right(flags: &mut Flags, x: u8) -> u8 {
     shifted
 }
 
-// Rotate right using the carry flag as the new most-significant bit - affects all flags.
+/// Rotate right using the carry flag as the new most-significant bit - affects all flags.
 pub fn rotate_right_through_carry_flag(flags: &mut Flags, x: u8) -> u8 {
     let carry_bit = get_bit(x, 0);
 
@@ -179,7 +179,7 @@ pub fn rotate_right_through_carry_flag(flags: &mut Flags, x: u8) -> u8 {
     shifted
 }
 
-// Shift right but keep the most-significant bit from before the shift - affects all flags.
+/// Shift right but keep the most-significant bit from before the shift - affects all flags.
 pub fn shift_right_leave_msb(flags: &mut Flags, x: u8) -> u8 {
     let carry_bit = get_bit(x, 0);
     let most_sig_bit = get_bit(x, 7);
@@ -192,7 +192,7 @@ pub fn shift_right_leave_msb(flags: &mut Flags, x: u8) -> u8 {
     shifted
 }
 
-// Shift right and set the most-significant bit to 0 - affects all flags.
+/// Shift right and set the most-significant bit to 0 - affects all flags.
 pub fn shift_right_clear_msb(flags: &mut Flags, x: u8) -> u8 {
     let carry_bit = get_bit(x, 0);
     let shifted = x >> 1;
@@ -200,7 +200,7 @@ pub fn shift_right_clear_msb(flags: &mut Flags, x: u8) -> u8 {
     shifted
 }
 
-// Check if the given bit is set in the given value and then set zero, subtraction, and half carry flags accordingly.
+/// Check if the given bit is set in the given value and then set zero, subtraction, and half carry flags accordingly.
 pub fn test_bit(flags: &mut Flags, value: u8, bit: u8) {
     let set = get_bit(value, bit);
     flags.set_zero(!set);
@@ -208,7 +208,7 @@ pub fn test_bit(flags: &mut Flags, value: u8, bit: u8) {
     flags.set_half_carry(true);
 }
 
-// Swap the nibbles in the given byte - affects all flags.
+/// Swap the nibbles in the given byte - affects all flags.
 pub fn swap_nibbles(flags: &mut Flags, value: u8) -> u8 {
     set_bitwise_flags(flags, value, false);
     let upper = value >> 4;

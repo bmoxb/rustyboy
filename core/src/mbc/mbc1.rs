@@ -5,9 +5,9 @@ use crate::cartridge::Cartridge;
 
 pub struct MBC1 {
     cart: Cartridge,
-    // Whether RAM is enabled or not (set by writing in range 0x000-0x1FFF).
+    /// Whether RAM is enabled or not (set by writing in range 0x000-0x1FFF).
     ram_enable: bool,
-    // The current ROM bank (this variable merges the two separate 5-bit and 2-bit registers).
+    /// The current ROM bank (this variable merges the two separate 5-bit and 2-bit registers).
     rom_bank: u8,
 }
 

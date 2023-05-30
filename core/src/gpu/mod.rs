@@ -22,35 +22,35 @@ const SEARCHING_OAM_PERIOD: TCycles = TCycles(80);
 const TRANSFERRING_DATA_PERIOD: TCycles = TCycles(172);
 
 pub struct Gpu {
-    // The screen to which the GPU will draw.
+    /// The screen to which the GPU will draw.
     pub screen: Screen,
-    // Video memory (contains tile map, tile data, etc.)
+    /// Video memory (contains tile map, tile data, etc.)
     pub vram: VideoRam,
-    // Object attribute memory / sprite attribute table (contains sprite positions and attributes).
+    /// Object attribute memory / sprite attribute table (contains sprite positions and attributes).
     pub oam: SpriteAttributeTable,
-    // 0xFF40 - LCD control register.
+    /// 0xFF40 - LCD control register.
     pub lcd_control: LcdControlRegister,
-    // 0xFF41 - LCD status register.
+    /// 0xFF41 - LCD status register.
     pub lcd_status: LcdStatusRegister,
-    // 0xFF42 - Viewport Y (specify the visible area of the background).
+    /// 0xFF42 - Viewport Y (specify the visible area of the background).
     pub viewport_y: u8,
-    // 0xFF43 - Viewport X (specify the visible area of the background).
+    /// 0xFF43 - Viewport X (specify the visible area of the background).
     pub viewport_x: u8,
-    // 0xFF44 - LCD Y (current scanline being drawn, from 0 to 153).
+    /// 0xFF44 - LCD Y (current scanline being drawn, from 0 to 153).
     pub lcd_y: u8,
-    // 0xFF45 - LY compare (this value is compared with LCD Y and an interrupt is triggered when they're equal).
+    /// 0xFF45 - LY compare (this value is compared with LCD Y and an interrupt is triggered when they're equal).
     pub ly_compare: u8,
-    // 0xFF47 - Background colour palette.
+    /// 0xFF47 - Background colour palette.
     pub bg_palette_data: Palette,
-    // 0xFF48 - First of two object (sprite) colour palettes.
+    /// 0xFF48 - First of two object (sprite) colour palettes.
     pub obj_palette_0_data: Palette,
-    // 0xFF49 - Second of two object (sprite) colour palettes.
+    /// 0xFF49 - Second of two object (sprite) colour palettes.
     pub obj_palette_1_data: Palette,
-    // 0xFF4A - Window Y (position of the window).
+    /// 0xFF4A - Window Y (position of the window).
     pub window_y: u8,
-    // 0xFF4B - Window X (position of the window).
+    /// 0xFF4B - Window X (position of the window).
     pub window_x: u8,
-    // Counter used to time transition between rendering states.
+    /// Counter used to time transition between rendering states.
     clock: TCycles,
 }
 
@@ -75,7 +75,7 @@ impl Gpu {
         }
     }
 
-    // Handle the transitions between rendering states and draw to the screen appropriately.
+    /// Handle the transitions between rendering states and draw to the screen appropriately.
     pub fn update(&mut self, interrupts: &mut Interrupts, cycles: TCycles) {
         self.clock += cycles;
 
@@ -120,9 +120,9 @@ impl Gpu {
         }
     }
 
-    // Called after a scanline has been drawn. Increments the LCD Y position and, if we've reached the button of the
-    // screen, will flag the VBlank interrupt and transition to the VBlank state. If however we are not yet at the
-    // bottom of the screen, then we will move on to the next scanline by transitioning to the 'searching OAM' state.
+    /// Called after a scanline has been drawn. Increments the LCD Y position and, if we've reached the button of the
+    /// screen, will flag the VBlank interrupt and transition to the VBlank state. If however we are not yet at the
+    /// bottom of the screen, then we will move on to the next scanline by transitioning to the 'searching OAM' state.
     fn hblank(&mut self, interrupts: &mut Interrupts) -> LcdStatus {
         self.lcd_y += 1;
 
@@ -134,9 +134,9 @@ impl Gpu {
         }
     }
 
-    // Called after all scanlines have been drawn. Will remain in this state and increment LCD Y position until the
-    // LCD Y position reaches 10 below the height of the screen, at which point LCD Y is reset to 0 and we transition
-    // to the 'searching OAM' state.
+    /// Called after all scanlines have been drawn. Will remain in this state and increment LCD Y position until the
+    /// LCD Y position reaches 10 below the height of the screen, at which point LCD Y is reset to 0 and we transition
+    /// to the 'searching OAM' state.
     fn vblank(&mut self) -> LcdStatus {
         self.lcd_y += 1;
 
@@ -154,7 +154,7 @@ impl Gpu {
         LcdStatus::TransferringData
     }
 
-    // In this state we handle drawing a scanline to the screen before then transitioning to the HBlank state.
+    /// In this state we handle drawing a scanline to the screen before then transitioning to the HBlank state.
     fn transferring_data(&mut self) -> LcdStatus {
         self.draw_scanline();
         LcdStatus::HBlank
