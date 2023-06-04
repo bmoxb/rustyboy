@@ -21,6 +21,9 @@ const HRAM_SIZE: usize = (HRAM_END - HRAM_START + 1) as usize;
 
 const OAM_TRANSFER_PERIOD: MCycles = MCycles(160);
 
+/// Represents both general-purpose RAM (working RAM and high RAM) as well as manages certain components of the full
+/// system that are interacted with via the memory bus (the GPU, timer, interrupt system, serial, joypad, and OAM
+/// transfer).
 pub struct Memory {
     mbc: Box<dyn MemoryBankController>,
     pub gpu: Gpu,
@@ -52,6 +55,8 @@ impl Memory {
         }
     }
 
+    /// Update the components of the emulator interacted with via the memory bus given that a specified number of CPU
+    /// cycles have elapsed.
     pub fn update(&mut self, cycles: MCycles) {
         self.gpu.update(&mut self.interrupts, cycles.into());
         self.timer.update(&mut self.interrupts, cycles);

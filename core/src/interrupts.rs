@@ -4,6 +4,7 @@ use num_traits::FromPrimitive;
 
 use crate::bits::{get_bit, modify_bit};
 
+/// Represents the interrupt enable and flag registers.
 pub struct Interrupts {
     pub enable: u8,
     pub flag: u8,
@@ -16,6 +17,9 @@ impl Interrupts {
             flag: 0xE1,
         }
     }
+
+    /// Flag an interrupt so that it will be handled (the CPU will call the relevant interrupt handler when an interrupt
+    /// is both flagged, enabled, and IME is set).
     pub fn flag(&mut self, int: Interrupt, value: bool) {
         self.flag = modify_bit(self.flag, int.bit(), value);
     }
@@ -25,6 +29,8 @@ impl Interrupts {
         get_bit(self.flag, int.bit())
     }
 
+    /// Returns the highest-priority interrupt that is both flagged and enabled (if any). The priority order of
+    /// interrupts (from highest to lowest) is: VBlank, LCD STAT, timer, serial, joypad.
     pub fn next_triggered_interrupt(&self) -> Option<Interrupt> {
         let triggered = self.flag & self.enable;
         if triggered == 0 {
@@ -48,10 +54,12 @@ pub enum Interrupt {
 }
 
 impl Interrupt {
+    /// Calculates the address in memory of the interrupt handler for this interrupt.
     pub fn handler_address(&self) -> u16 {
         0x40 + (0x8 * (*self as u16))
     }
 
+    /// Get the number of the bit for this interrupt in the interrupt enable and flag bytes.
     pub fn bit(&self) -> u8 {
         *self as u8
     }

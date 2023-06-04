@@ -25,6 +25,7 @@ use screen::Screen;
 
 const CYCLES_PER_SECOND: MCycles = MCycles(1048576);
 
+/// Game Boy console emulator.
 pub struct GameBoy {
     cpu: Cpu,
     mem: Memory,
@@ -40,6 +41,8 @@ impl GameBoy {
         }
     }
 
+    /// Update the state of the console - fetch and execute CPU instructions, handle interrupts, update the timer,
+    /// handle rendering, etc. The `delta` parameter must express in seconds how long has passed since the last update.
     pub fn update(&mut self, delta: f32) {
         let total_cycles_this_update = (delta * CYCLES_PER_SECOND.0 as f32) as u32;
         let mut cycles_so_far = 0;
@@ -50,6 +53,8 @@ impl GameBoy {
         }
     }
 
+    /// Perform a single update 'step'. In other words, fetch and execute a single CPU instruction and based on the
+    /// number of cycles required by that instruction, update the other components of the system.
     pub fn step(&mut self) -> MCycles {
         if let Some(dst) = &mut self.gb_doctor_logging {
             writeln!(

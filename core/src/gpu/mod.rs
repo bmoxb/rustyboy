@@ -160,6 +160,8 @@ impl Gpu {
         LcdStatus::HBlank
     }
 
+    /// Compare the value of the LCD Y and LYC registers and, if they are equal, set the relevant bit of the LCD status
+    /// register and flag a STAT interrupt.
     fn compare_ly_lyc(&mut self, interrupts: &mut Interrupts) {
         self.lcd_status
             .set_ly_lyc_equal(self.lcd_y == self.ly_compare);
@@ -174,6 +176,7 @@ impl Gpu {
         self.draw_sprites_scanline();
     }
 
+    /// Draw a single scanline of the background layer.
     fn draw_background_scanline(&mut self) {
         for x in (0..SCREEN_WIDTH).step_by(TILE_WIDTH) {
             let map_x = (x / TILE_WIDTH) as u8;
@@ -198,6 +201,7 @@ impl Gpu {
         }
     }
 
+    /// Draw a single scanline of the sprite layer.
     fn draw_sprites_scanline(&mut self) {
         let mut sprites_drawn = 0;
 
@@ -221,6 +225,7 @@ impl Gpu {
         }
     }
 
+    /// Draw part of a scanline for a given sprite.
     fn draw_sprite_scanline(&mut self, sprite: &Sprite) {
         let sprite_line = if sprite.y_flip {
             (sprite.y + TILE_WIDTH as u8) - (self.lcd_y + 16) - 1

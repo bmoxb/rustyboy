@@ -6,6 +6,7 @@ pub const OAM_SIZE: usize = (OAM_END - OAM_START + 1) as usize;
 
 pub const SPRITE_COUNT: u16 = 40;
 
+// The sprite attribute table (also known as OAM or object attribute memory) contains all sprite data.
 pub struct SpriteAttributeTable {
     data: [u8; OAM_SIZE],
 }
@@ -27,6 +28,7 @@ impl SpriteAttributeTable {
         self.data[(addr - OAM_START) as usize] = value;
     }
 
+    /// Read the sprite data of the sprite at the given index in the table.
     pub fn read_sprite(&self, index: u16) -> Sprite {
         debug_assert!(index < SPRITE_COUNT);
         let addr = OAM_START + (index * 4);

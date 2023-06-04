@@ -1,5 +1,7 @@
 use derive_more::Display;
 
+/// The Interrupt Master Enable (IME) is a memory register that is required to be set for interrupts to be handled (see
+/// [`crate::cpu::Cpu::handle_interrupts`]).
 #[derive(Display)]
 #[display(fmt = "IME={}", "*value as u8")]
 pub struct InterruptMasterEnable {
@@ -21,6 +23,7 @@ impl InterruptMasterEnable {
         self.value
     }
 
+    /// This method should be called once every CPU cycle so as to handle any delayed updates to the IME register.
     pub fn cycle(&mut self) {
         if matches!(self.enable_in_cycles, Some(0)) {
             self.value = true;
@@ -39,10 +42,13 @@ impl InterruptMasterEnable {
         }
     }
 
+    /// Enable the IME register after the specified number of CPU cycles have passed. Enabling IME can be delayed as the
+    /// EI instruction for example sets IME with a one cycle delay.
     pub fn enable(&mut self, after_cycles: u8) {
         self.enable_in_cycles = Some(after_cycles);
     }
 
+    /// Disable the IME register after the specified number of CPU cycles have passed.
     pub fn disable(&mut self, after_cycles: u8) {
         self.disable_in_cycles = Some(after_cycles);
     }

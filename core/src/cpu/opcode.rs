@@ -2,6 +2,7 @@ use crate::bits::get_bits;
 
 use derive_more::Display;
 
+/// A single 1 byte CPU opcode.
 #[derive(Clone, Copy, Display)]
 #[display(fmt = "{0:#04X} ({0:#010b})", _0)]
 pub struct Opcode(pub u8);
