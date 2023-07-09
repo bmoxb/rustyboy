@@ -24,10 +24,10 @@ impl MBC1 {
 impl super::MemoryBankController for MBC1 {
     fn read8(&self, addr: u16) -> u8 {
         match addr {
-            0x0000..=0x3FFF => self.cart.read8(addr),
+            0x0000..=0x3FFF => self.cart.read8(addr as usize),
             0x4000..=0x7FFF => self
                 .cart
-                .read8((self.rom_bank as u16 * 0x4000) + addr - 0x4000),
+                .read8((self.rom_bank as usize * 0x4000) + addr as usize - 0x4000),
             0xA000..=0xBFFF => 0,
             _ => 0,
         }
@@ -38,7 +38,7 @@ impl super::MemoryBankController for MBC1 {
             0x0000..=0x1FFF => self.ram_enable = get_bits(value, 0, 5) == 0xA, // lower 4 bits set to 0xA enables RAM
             0x2000..=0x3FFF => {
                 let value = get_bits(value, 0, 6); // only lowest 5 bits can be modified here
-                self.rom_bank = cmp::min(value, 1); // cannot be set to 0
+                self.rom_bank = cmp::max(value, 1); // cannot be set to 0
             }
             0x4000..=0x5FFF => {}
             0x6000..=0x7FFF => {}
@@ -46,4 +46,10 @@ impl super::MemoryBankController for MBC1 {
             _ => {}
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    // TODO
 }

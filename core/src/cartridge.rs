@@ -16,8 +16,8 @@ impl Cartridge {
         fs::read(path).map(Cartridge::from_data)
     }
 
-    pub fn read8(&self, addr: u16) -> u8 {
-        self.data[addr as usize]
+    pub fn read8(&self, addr: usize) -> u8 {
+        self.data[addr]
     }
 
     pub fn game_title(&self) -> String {
