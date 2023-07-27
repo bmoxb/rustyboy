@@ -1,6 +1,6 @@
 use std::cmp;
 
-use crate::bits::get_bits;
+use crate::bits::{get_bit, get_bits, modify_bits};
 use crate::cartridge::Cartridge;
 
 pub struct MBC1 {
@@ -26,7 +26,7 @@ impl MBC1 {
             cart,
             ram_enable: false,
             rom_bank: 1,
-            ram: has_ram.then(|| vec![0; 0x2000]), // TODO: handle larger RAM size
+            ram: has_ram.then(|| vec![0; 0x8000]),
             ram_bank: 0,
             banking_mode: BankingMode::Simple,
         }
@@ -36,41 +36,75 @@ impl MBC1 {
 impl super::MemoryBankController for MBC1 {
     fn read8(&self, addr: u16) -> u8 {
         match addr {
+            // ROM bank 0
             0x0000..=0x3FFF => self.cart.read8(addr as usize),
+
+            // ROM bank 1-127
             0x4000..=0x7FFF => self
                 .cart
                 .read8((self.rom_bank as usize * 0x4000) + addr as usize - 0x4000),
+
+            // RAM bank 0-3
             0xA000..=0xBFFF => {
                 if let Some(ram) = &self.ram {
                     if self.ram_enable {
-                        // TODO: RAM banking
-                        return ram[(addr - 0xA000) as usize];
+                        return ram[(addr - 0xA000 + self.ram_bank_offset()) as usize];
                     }
                 }
                 0xFF
             }
+
             _ => 0,
         }
     }
 
     fn write8(&mut self, addr: u16, value: u8) {
         match addr {
+            // RAM enable/disable
             0x0000..=0x1FFF => self.ram_enable = get_bits(value, 0, 5) == 0xA, // lower 4 bits set to 0xA enables RAM
+
+            // select ROM bank
             0x2000..=0x3FFF => {
                 let value = get_bits(value, 0, 5); // only lowest 5 bits can be modified here
                 self.rom_bank = cmp::max(value, 1); // cannot be set to 0
             }
-            0x4000..=0x5FFF => {}
-            0x6000..=0x7FFF => {}
+
+            // select RAM bank or upper bits of ROM bank number
+            0x4000..=0x5FFF => {
+                let two_bits = get_bits(value, 0, 2);
+                self.ram_bank = two_bits;
+                self.rom_bank = modify_bits(self.rom_bank, 5, 7, two_bits);
+            }
+
+            // select banking mode
+            0x6000..=0x7FFF => {
+                self.banking_mode = if get_bit(value, 0) {
+                    BankingMode::Advanced
+                } else {
+                    BankingMode::Simple
+                };
+            }
+
+            // write RAM bank 0-3
             0xA000..=0xBFFF => {
+                let bank_offset = self.ram_bank_offset();
                 if let Some(ram) = &mut self.ram {
                     if self.ram_enable {
-                        // TODO: RAM banking
-                        ram[(addr - 0xA000) as usize] = value;
+                        ram[(addr - 0xA000 + bank_offset) as usize] = value;
                     }
                 }
             }
+
             _ => {}
+        }
+    }
+}
+
+impl MBC1 {
+    fn ram_bank_offset(&self) -> u16 {
+        match self.banking_mode {
+            BankingMode::Simple => 0,
+            BankingMode::Advanced => self.ram_bank as u16 * 0x2000,
         }
     }
 }
@@ -78,7 +112,7 @@ impl super::MemoryBankController for MBC1 {
 enum BankingMode {
     /// In simple banking mode, reads to...
     Simple,
-    // In advanced banking mode, ...
+    /// In advanced banking mode, ...
     Advanced,
 }
 
@@ -115,17 +149,22 @@ mod tests {
 
     #[test]
     fn read_rom_banks_advanced_banking_mode() {
-        let mut data = vec![0; 0x88000]; // 544 KiB
+        let mut data = vec![0; 0x200000]; // 2048 KiB
         data[0x84000] = 0xA; // write a value in bank 33
+        data[0x1FC000] = 0xB; // write a value in bank 127
 
         let mut mbc = MBC1::new(Cartridge::from_data(data), false, false);
         mbc.write8(0x7000, 1); // advanced banking mode
 
-        // select bank 33
+        // access bank 33
         mbc.write8(0x2000, 1);
         mbc.write8(0x4000, 1);
-
         assert_eq!(mbc.read8(0x4000), 0xA);
+
+        // access bank 127
+        mbc.write8(0x2000, 0xFF);
+        mbc.write8(0x4000, 0xFF);
+        assert_eq!(mbc.read8(0x4000), 0xB);
     }
 
     #[test]
@@ -165,7 +204,7 @@ mod tests {
     }
 
     #[test]
-    fn read_ram_banks_simple_banking_mode() {
+    fn try_read_ram_banks_simple_banking_mode() {
         let mut mbc = MBC1::new(Cartridge::from_data(vec![]), true, false);
         mbc.write8(0, 0xA); // enable RAM
         mbc.write8(0x6000, 0); // simple banking mode (i.e., lock to bank 0)
