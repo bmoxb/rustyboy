@@ -8,12 +8,12 @@ pub struct MBC1 {
     cart: Cartridge,
     /// Whether RAM is enabled or not (set by writing in range 0x000-0x1FFF).
     ram_enable: bool,
-    /// The current ROM bank (this variable merges the two separate 5-bit (address range 0x2000~0x3FFF) and 2-bit
-    /// (address range 0x4000~0x5FFF) registers).
+    /// The current ROM bank (this variable merges the two separate 5-bit (address range 0x2000-0x3FFF) and 2-bit
+    /// (address range 0x4000-0x5FFF) registers).
     rom_bank: u8,
     /// RAM stored on the MBC (if any).
     ram: Option<Vec<u8>>,
-    /// The current RAM bank (from bank 0 to 3 inclusive). Set by writing in address range 0x4000~0x5FFF.
+    /// The current RAM bank (from bank 0 to 3 inclusive). Set by writing in address range 0x4000-0x5FFF.
     ram_bank: u8,
     /// The current banking mode (either 'simple' or 'advanced' - see [`BankingMode`] documentation for an explanation
     /// of these).
@@ -36,13 +36,17 @@ impl MBC1 {
 impl super::MemoryBankController for MBC1 {
     fn read8(&self, addr: u16) -> u8 {
         match addr {
-            // ROM bank 0
-            0x0000..=0x3FFF => self.cart.read8(addr as usize),
+            // ROM bank 0 (or bank 32, 64, or 96 in advanced banking mode)
+            0x0000..=0x3FFF => match self.banking_mode {
+                BankingMode::Simple => self.read_rom_bank(0, addr),
+                BankingMode::Advanced => {
+                    let two_bits = get_bits(self.rom_bank, 5, 7);
+                    self.read_rom_bank(two_bits * 0x20, addr)
+                }
+            },
 
             // ROM bank 1-127
-            0x4000..=0x7FFF => self
-                .cart
-                .read8((self.rom_bank as usize * 0x4000) + addr as usize - 0x4000),
+            0x4000..=0x7FFF => self.read_rom_bank(self.rom_bank, addr - 0x4000),
 
             // RAM bank 0-3
             0xA000..=0xBFFF => {
@@ -101,6 +105,10 @@ impl super::MemoryBankController for MBC1 {
 }
 
 impl MBC1 {
+    fn read_rom_bank(&self, bank: u8, offset: u16) -> u8 {
+        self.cart.read8((bank as usize * 0x4000) + offset as usize)
+    }
+
     fn ram_bank_offset(&self) -> u16 {
         match self.banking_mode {
             BankingMode::Simple => 0,
@@ -110,9 +118,13 @@ impl MBC1 {
 }
 
 enum BankingMode {
-    /// In simple banking mode, reads to...
+    /// In simple banking mode, access to RAM and ROM in memory range 0x000-0x3FFF is locked to
+    /// their respective 0th banks. ROM banks 1 to 127 can still be access through memory range
+    /// 0x4000-0x7FFF even in this mode.
     Simple,
-    /// In advanced banking mode, ...
+    /// In advanced banking mode, the 2-bit register in memory range 0x4000-0x5FFF can be used to
+    /// access RAM banks 1-3 but also to access RAM banks 32, 64, and 96 through the memory range
+    /// 0x000-0x1FFF.
     Advanced,
 }
 
@@ -134,7 +146,7 @@ mod tests {
     }
 
     #[test]
-    fn read_rom_banks() {
+    fn read_rom_banks_5_bit_bank_number() {
         let mut data = vec![0; 0x10000]; // 64 KiB
         data[0x4000] = 0xA; // set test value in bank 1
         data[0x8100] = 0xB; // set test value in bank 2
@@ -148,7 +160,7 @@ mod tests {
     }
 
     #[test]
-    fn read_rom_banks_advanced_banking_mode() {
+    fn read_rom_banks_7_bit_bank_number() {
         let mut data = vec![0; 0x200000]; // 2048 KiB
         data[0x84000] = 0xA; // write a value in bank 33
         data[0x1FC000] = 0xB; // write a value in bank 127
@@ -165,6 +177,23 @@ mod tests {
         mbc.write8(0x2000, 0xFF);
         mbc.write8(0x4000, 0xFF);
         assert_eq!(mbc.read8(0x4000), 0xB);
+    }
+
+    #[test]
+    fn read_rom_banks_advanced_banking_mode() {
+        let mut data = vec![0; 0x200000]; // 2048 KiB
+        data[0x80000] = 0xA; // write a value in bank 32
+        data[0x84000] = 0xB; // write a value in bank 33
+
+        let mut mbc = MBC1::new(Cartridge::from_data(data), false, false);
+        mbc.write8(0x6000, 1); // advanced banking mode
+
+        // select bank 33 when reading range 0x4000-0x7FFF
+        mbc.write8(0x2000, 1);
+        mbc.write8(0x4000, 1); // due to advanced bank mode, this also selects bank 32 in range 0x0000-0x3FFF
+
+        assert_eq!(mbc.read8(0x4000), 0xB); // in bank 33
+        assert_eq!(mbc.read8(0x0000), 0xA); // in bank 32, thanks to advanced banking
     }
 
     #[test]
