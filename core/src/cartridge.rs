@@ -16,8 +16,8 @@ impl Cartridge {
         fs::read(path).map(Cartridge::from_data)
     }
 
-    pub fn read8(&self, addr: u16) -> u8 {
-        self.data[addr as usize]
+    pub fn read8(&self, addr: usize) -> u8 {
+        self.data[addr]
     }
 
     pub fn game_title(&self) -> String {
@@ -68,6 +68,20 @@ impl Cartridge {
                 battery: true,
             },
             n => CartridgeType::Unsupported(n),
+        }
+    }
+
+    pub fn rom_size(&self) -> usize {
+        1 << (self.data[0x148] + 15)
+    }
+
+    pub fn ram_size(&self) -> usize {
+        match self.data[0x149] {
+            2 => 0x2000,  // 8 KiB (1 bank)
+            3 => 0x8000,  // 32 KiB (4 banks)
+            4 => 0x20000, // 128 KiB (16 banks)
+            5 => 0x10000, // 64 KiB (8 banks)
+            _ => 0,
         }
     }
 

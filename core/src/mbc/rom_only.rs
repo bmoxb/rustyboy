@@ -12,7 +12,7 @@ impl RomOnly {
 
 impl super::MemoryBankController for RomOnly {
     fn read8(&self, addr: u16) -> u8 {
-        self.cart.read8(addr)
+        self.cart.read8(addr as usize)
     }
 
     fn write8(&mut self, addr: u16, value: u8) {

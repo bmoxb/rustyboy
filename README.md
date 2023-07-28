@@ -35,7 +35,7 @@ list of emulator frontends below).
 * [x] Timer
 * [ ] Cartridges
   * [x] No MBC
-  * [ ] MBC-1
+  * [x] MBC-1
   * [ ] MBC-5
 * [x] Joypad input
 * [ ] Graphics
@@ -54,5 +54,7 @@ list of emulator frontends below).
 
 * [x] Tetris
 * [x] Dr. Mario
+* [ ] The Legend of Zelda: Link's Awakening
+* [ ] Kirby's Dream Land
 * [ ] Super Mario Land
 * [ ] Pokemon Red/Blue
