@@ -71,6 +71,20 @@ impl Cartridge {
         }
     }
 
+    pub fn rom_size(&self) -> usize {
+        1 << (self.data[0x148] + 15)
+    }
+
+    pub fn ram_size(&self) -> usize {
+        match self.data[0x149] {
+            2 => 0x2000,  // 8 KiB (1 bank)
+            3 => 0x8000,  // 32 KiB (4 banks)
+            4 => 0x20000, // 128 KiB (16 banks)
+            5 => 0x10000, // 64 KiB (8 banks)
+            _ => 0,
+        }
+    }
+
     pub fn sold_in_japan(&self) -> bool {
         self.data[0x14A] == 0
     }

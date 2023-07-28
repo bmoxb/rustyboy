@@ -22,11 +22,12 @@ pub struct MBC1 {
 
 impl MBC1 {
     pub fn new(cart: Cartridge, has_ram: bool, _has_battery: bool) -> Self {
+        let ram = has_ram.then(|| vec![0; cart.ram_size()]);
         MBC1 {
             cart,
             ram_enable: false,
             rom_bank: 1,
-            ram: has_ram.then(|| vec![0; 0x8000]),
+            ram,
             ram_bank: 0,
             banking_mode: BankingMode::Simple,
         }
@@ -164,9 +165,7 @@ mod tests {
         let mut data = vec![0; 0x200000]; // 2048 KiB
         data[0x84000] = 0xA; // write a value in bank 33
         data[0x1FC000] = 0xB; // write a value in bank 127
-
         let mut mbc = MBC1::new(Cartridge::from_data(data), false, false);
-        mbc.write8(0x7000, 1); // advanced banking mode
 
         // access bank 33
         mbc.write8(0x2000, 1);
@@ -198,7 +197,9 @@ mod tests {
 
     #[test]
     fn read_ram_no_banking() {
-        let mut mbc = MBC1::new(Cartridge::from_data(vec![]), true, false);
+        let mut data = vec![0; 0x200];
+        data[0x149] = 2; // 1 RAM bank
+        let mut mbc = MBC1::new(Cartridge::from_data(data), true, false);
         mbc.write8(0, 0xA); // enable RAM
         mbc.write8(0xA000, 0xAB);
         assert_eq!(mbc.read8(0xA000), 0xAB);
@@ -208,7 +209,9 @@ mod tests {
 
     #[test]
     fn read_ram_banks() {
-        let mut mbc = MBC1::new(Cartridge::from_data(vec![]), true, false);
+        let mut data = vec![0; 0x200];
+        data[0x149] = 3; // 4 RAM banks
+        let mut mbc = MBC1::new(Cartridge::from_data(data), true, false);
         mbc.write8(0, 0xA); // enable RAM
         mbc.write8(0x6000, 1); // RAM banking mode
 
@@ -234,7 +237,9 @@ mod tests {
 
     #[test]
     fn try_read_ram_banks_simple_banking_mode() {
-        let mut mbc = MBC1::new(Cartridge::from_data(vec![]), true, false);
+        let mut data = vec![0; 0x200];
+        data[0x149] = 3; // 4 RAM banks
+        let mut mbc = MBC1::new(Cartridge::from_data(data), true, false);
         mbc.write8(0, 0xA); // enable RAM
         mbc.write8(0x6000, 0); // simple banking mode (i.e., lock to bank 0)
 
@@ -253,7 +258,9 @@ mod tests {
 
     #[test]
     fn enable_disable_ram() {
-        let mut mbc = MBC1::new(Cartridge::from_data(vec![]), true, false);
+        let mut data = vec![0; 0x200];
+        data[0x149] = 2; // 1 RAM bank
+        let mut mbc = MBC1::new(Cartridge::from_data(data), true, false);
 
         mbc.write8(0, 0xA); // enable RAM
         mbc.write8(0xA000, 123);
