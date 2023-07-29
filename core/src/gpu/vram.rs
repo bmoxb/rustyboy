@@ -32,7 +32,7 @@ impl VideoRam {
 
     /// Read a tile at the given index in the memory area 0x8000 to 0x87FF using an unsigned offset.
     pub fn read_tile_line_unsigned_index(&self, offset: u8, line: u8) -> [u8; TILE_WIDTH] {
-        debug_assert!((line as usize) < TILE_WIDTH);
+        debug_assert!((line as usize) < TILE_WIDTH * 2);
 
         let addr = 0x8000 + (offset as u16 * TILE_SIZE_BYTES as u16);
         // `line as u16 * 2` below is because there are two bytes per line

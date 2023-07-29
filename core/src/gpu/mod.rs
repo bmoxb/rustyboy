@@ -210,7 +210,7 @@ impl Gpu {
 
             // determine whether the sprite falls within the scanline currently being drawn
             let low = sprite.y.saturating_sub(16);
-            let high = sprite.y.saturating_sub(16 - TILE_WIDTH as u8);
+            let high = sprite.y.saturating_sub(16 - self.sprite_height());
             let scanline_in_sprite_bounds = (low..high).contains(&self.lcd_y);
 
             if scanline_in_sprite_bounds {
@@ -228,7 +228,7 @@ impl Gpu {
     /// Draw part of a scanline for a given sprite.
     fn draw_sprite_scanline(&mut self, sprite: &Sprite) {
         let sprite_line = if sprite.y_flip {
-            (sprite.y + TILE_WIDTH as u8) - (self.lcd_y + 16) - 1
+            (sprite.y + self.sprite_height()) - (self.lcd_y + 16) - 1
         } else {
             self.lcd_y + 16 - sprite.y
         };
@@ -256,6 +256,16 @@ impl Gpu {
                     colour,
                 );
             }
+        }
+    }
+
+    /// Returns the height of sprites. This is either 8 or 16 and determined by the LCD control
+    /// register.
+    fn sprite_height(&self) -> u8 {
+        if self.lcd_control.obj_size() {
+            (TILE_WIDTH * 2) as u8
+        } else {
+            TILE_WIDTH as u8
         }
     }
 }

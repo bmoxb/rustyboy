@@ -44,7 +44,7 @@ list of emulator frontends below).
   * [ ] Draw window
   * [x] Draw sprites
   * [x] Handle flipped sprites
-  * [ ] Handle 8x16 sprites
+  * [x] Handle 8x16 sprites
 * [x] Frontends
   * [x] Desktop
   * [x] Web
