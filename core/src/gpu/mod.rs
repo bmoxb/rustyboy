@@ -178,8 +178,12 @@ impl Gpu {
 
     /// Draw a single scanline of the background layer.
     fn draw_background_scanline(&mut self) {
-        for x in (0..SCREEN_WIDTH).step_by(TILE_WIDTH) {
-            let map_x = (x / TILE_WIDTH) as u8;
+        if !self.lcd_control.bg_and_window_enable() {
+            return;
+        }
+
+        for draw_x in (0..SCREEN_WIDTH).step_by(TILE_WIDTH) {
+            let map_x = ((draw_x + self.viewport_x as usize) / TILE_WIDTH) as u8;
             let map_y = self.lcd_y / TILE_WIDTH as u8;
             let tile_index = self.vram.read_tile_index_from_map_9800(map_x, map_y);
 
@@ -193,10 +197,12 @@ impl Gpu {
                     .read_tile_line_signed_index(tile_index, line_number)
             };
 
+            let offset_within_tile = TILE_WIDTH - (self.viewport_x as usize % TILE_WIDTH);
+
             for (horizontal_offset, colour_id) in colour_ids.into_iter().enumerate() {
                 let colour = self.bg_palette_data.colour_for_id(colour_id);
                 self.screen
-                    .set((x + horizontal_offset) as u8, self.lcd_y, colour);
+                    .set((draw_x + offset_within_tile + horizontal_offset) as u8, self.lcd_y, colour);
             }
         }
     }
