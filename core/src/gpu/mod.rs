@@ -182,12 +182,11 @@ impl Gpu {
             return;
         }
 
-        for draw_x in (0..SCREEN_WIDTH).step_by(TILE_WIDTH) {
-            let map_x = ((draw_x + self.viewport_x as usize) / TILE_WIDTH) as u8;
-            let map_y = self.lcd_y / TILE_WIDTH as u8;
+        for x in (0..SCREEN_WIDTH as u8).step_by(TILE_WIDTH) {
+            let map_x = x.wrapping_add(self.viewport_x) / TILE_WIDTH as u8;
+            let map_y = self.lcd_y.wrapping_add(self.viewport_y) / TILE_WIDTH as u8;
             let tile_index = self.vram.read_tile_index_from_map_9800(map_x, map_y);
-
-            let line_number = self.lcd_y % TILE_WIDTH as u8;
+            let line_number = self.lcd_y.wrapping_add(self.viewport_y) % TILE_WIDTH as u8;
 
             let colour_ids = if self.lcd_control.bg_and_window_tile_data_area() {
                 self.vram
@@ -197,12 +196,15 @@ impl Gpu {
                     .read_tile_line_signed_index(tile_index, line_number)
             };
 
-            let offset_within_tile = TILE_WIDTH - (self.viewport_x as usize % TILE_WIDTH);
+            let draw_x = x.wrapping_sub(self.viewport_x % TILE_WIDTH as u8);
 
-            for (horizontal_offset, colour_id) in colour_ids.into_iter().enumerate() {
+            for (colour_id_offset, colour_id) in colour_ids.into_iter().enumerate() {
                 let colour = self.bg_palette_data.colour_for_id(colour_id);
-                self.screen
-                    .set((draw_x + offset_within_tile + horizontal_offset) as u8, self.lcd_y, colour);
+                self.screen.set(
+                    draw_x.wrapping_add(colour_id_offset as u8),
+                    self.lcd_y,
+                    colour,
+                );
             }
         }
     }
