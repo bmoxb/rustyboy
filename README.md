@@ -40,11 +40,12 @@ list of emulator frontends below).
 * [x] Joypad input
 * [ ] Graphics
   * [x] Draw background
-  * [ ] Background scolling
+  * [x] Background scolling
   * [ ] Draw window
   * [x] Draw sprites
   * [x] Handle flipped sprites
   * [x] Handle 8x16 sprites
+  * [ ] Correct ordering of sprite and background tiles
 * [x] Frontends
   * [x] Desktop
   * [x] Web
