@@ -4,8 +4,8 @@ mod opcode;
 mod registers;
 
 use crate::bits::modify_bit;
-use crate::cycles::MCycles;
 use crate::memory::Memory;
+use crate::Cycles;
 
 use ime::InterruptMasterEnable;
 use opcode::Opcode;
@@ -37,15 +37,15 @@ impl Cpu {
         }
     }
 
-    pub fn cycle(&mut self, mem: &mut Memory) -> MCycles {
+    pub fn cycle(&mut self, mem: &mut Memory) -> Cycles {
         log::trace!("begin cycle - {}, {}", self.regs, self.ime);
 
         let interrupt_cycles = self.handle_interrupts(mem);
 
-        let cycles = if interrupt_cycles > MCycles(0) {
+        let cycles = if interrupt_cycles > 0 {
             interrupt_cycles
         } else if self.halted {
-            MCycles(1) // NOP
+            4 // NOP
         } else {
             self.fetch_execute(mem)
         };
@@ -57,8 +57,8 @@ impl Cpu {
         cycles
     }
 
-    fn handle_interrupts(&mut self, mem: &mut Memory) -> MCycles {
-        let mut cycles = MCycles(0);
+    fn handle_interrupts(&mut self, mem: &mut Memory) -> Cycles {
+        let mut cycles = 0;
 
         if let Some(int) = mem.interrupts.next_triggered_interrupt() {
             if self.ime.enabled() {
@@ -70,7 +70,7 @@ impl Cpu {
                 self.stack_push(mem, self.regs.pc);
                 self.regs.pc = int.handler_address();
 
-                cycles += MCycles(4);
+                cycles += 16;
             } else if self.halted {
                 // if IME=0 and halted, PC is incremented so as to continue execution after the HALT instruction
                 self.regs.pc += 1;
@@ -79,14 +79,14 @@ impl Cpu {
             if self.halted {
                 log::trace!("no longer halted due to interrupt being triggered");
                 self.halted = false;
-                cycles += MCycles(1);
+                cycles += 4;
             }
         }
 
         cycles
     }
 
-    fn fetch_execute(&mut self, mem: &mut Memory) -> MCycles {
+    fn fetch_execute(&mut self, mem: &mut Memory) -> Cycles {
         let opcode = Opcode(self.fetch8(mem));
 
         log::debug!(
@@ -102,7 +102,7 @@ impl Cpu {
         cycles
     }
 
-    fn execute(&mut self, opcode: Opcode, mem: &mut Memory) -> MCycles {
+    fn execute(&mut self, opcode: Opcode, mem: &mut Memory) -> Cycles {
         match opcode.0 {
             // --- 8-BIT LOAD INSTRUCTIONS ---
 
@@ -118,7 +118,7 @@ impl Cpu {
             | 0x78..=0x7D
             | 0x7F => {
                 self.regs.set8(opcode.xxx(), self.regs.get8(opcode.yyy()));
-                1
+                4
             }
 
             // LD r, n
@@ -126,121 +126,121 @@ impl Cpu {
             0x06 | 0x0E | 0x16 | 0x1E | 0x26 | 0x2E | 0x3E => {
                 let n = self.fetch8(mem);
                 self.regs.set8(opcode.xxx(), n);
-                2
+                8
             }
 
             // LD r, [HL]
             // 0b01xxx110
             0x46 | 0x4E | 0x56 | 0x5E | 0x66 | 0x6E | 0x7E => {
                 self.regs.set8(opcode.xxx(), mem.read8(self.regs.hl()));
-                2
+                8
             }
 
             // LD [HL], r
             // 0b01110yyy
             0x70..=0x75 | 0x77 => {
                 mem.write8(self.regs.hl(), self.regs.get8(opcode.yyy()));
-                2
+                8
             }
 
             // LD [HL], n
             0x36 => {
                 mem.write8(self.regs.hl(), self.fetch8(mem));
-                3
+                12
             }
 
             // LD A, [BC]
             0x0A => {
                 self.regs.a = mem.read8(self.regs.bc());
-                2
+                8
             }
 
             // LD A, [DE]
             0x1A => {
                 self.regs.a = mem.read8(self.regs.de());
-                2
+                8
             }
 
             // LD [BC], A
             0x02 => {
                 mem.write8(self.regs.bc(), self.regs.a);
-                2
+                8
             }
 
             // LD [DE], A
             0x12 => {
                 mem.write8(self.regs.de(), self.regs.a);
-                2
+                8
             }
 
             // LD A, [nn]
             0xFA => {
                 let nn = self.fetch16(mem);
                 self.regs.a = mem.read8(nn);
-                4
+                16
             }
 
             // LD [nn], A
             0xEA => {
                 let nn = self.fetch16(mem);
                 mem.write8(nn, self.regs.a);
-                4
+                16
             }
 
             // LDH A, [C]
             0xF2 => {
                 let addr = 0xFF00 + (self.regs.c as u16);
                 self.regs.a = mem.read8(addr);
-                2
+                8
             }
 
             // LDH [C], A
             0xE2 => {
                 let addr = 0xFF00 + (self.regs.c as u16);
                 mem.write8(addr, self.regs.a);
-                2
+                8
             }
 
             // LDH A, [n]
             0xF0 => {
                 let addr = 0xFF00 + (self.fetch8(mem) as u16);
                 self.regs.a = mem.read8(addr);
-                3
+                12
             }
 
             // LDH [n], A
             0xE0 => {
                 let addr = 0xFF00 + (self.fetch8(mem) as u16);
                 mem.write8(addr, self.regs.a);
-                3
+                12
             }
 
             // LD A, [HL-]
             0x3A => {
                 self.regs.a = mem.read8(self.regs.hl());
                 self.regs.set_hl(self.regs.hl() - 1);
-                2
+                8
             }
 
             // LD [HL-], A
             0x32 => {
                 mem.write8(self.regs.hl(), self.regs.a);
                 self.regs.set_hl(self.regs.hl() - 1);
-                2
+                8
             }
 
             // LD A, [HL+]
             0x2A => {
                 self.regs.a = mem.read8(self.regs.hl());
                 self.regs.set_hl(self.regs.hl() + 1);
-                2
+                8
             }
 
             // LD [HL+], A
             0x22 => {
                 mem.write8(self.regs.hl(), self.regs.a);
                 self.regs.set_hl(self.regs.hl() + 1);
-                2
+                8
             }
 
             // --- 16-BIT LOAD INSTRUCTIONS ---
@@ -250,13 +250,13 @@ impl Cpu {
             0x01 | 0x11 | 0x21 | 0x31 => {
                 let nn = self.fetch16(mem);
                 self.regs.set16_with_sp(opcode.rr(), nn);
-                3
+                12
             }
 
             // LD [nn], SP
             0x08 => {
                 mem.write16(self.fetch16(mem), self.regs.sp);
-                5
+                20
             }
 
             // LD HL, SP+n
@@ -265,20 +265,20 @@ impl Cpu {
                 let result =
                     alu::add16_with_signed_byte_operand(&mut self.regs.flags, self.regs.sp, n);
                 self.regs.set_hl(result);
-                3
+                12
             }
 
             // LD SP, HL
             0xF9 => {
                 self.regs.sp = self.regs.hl();
-                2
+                8
             }
 
             // PUSH rr
             // 0b11xx0101
             0xC5 | 0xD5 | 0xE5 | 0xF5 => {
                 self.stack_push(mem, self.regs.get16_with_af(opcode.rr()));
-                4
+                16
             }
 
             // POP rr
@@ -286,7 +286,7 @@ impl Cpu {
             0xC1 | 0xD1 | 0xE1 | 0xF1 => {
                 let value = self.stack_pop(mem);
                 self.regs.set16_with_af(opcode.rr(), value);
-                3
+                12
             }
 
             // --- 8-BIT ARITHMETIC/LOGIC INSTRUCTIONS ---
@@ -296,21 +296,21 @@ impl Cpu {
             0x80..=0x85 | 0x87 => {
                 let r = self.regs.get8(opcode.yyy());
                 self.regs.a = alu::add8(&mut self.regs.flags, self.regs.a, r);
-                1
+                4
             }
 
             // ADD [HL]
             0x86 => {
                 let x = mem.read8(self.regs.hl());
                 self.regs.a = alu::add8(&mut self.regs.flags, self.regs.a, x);
-                2
+                8
             }
 
             // ADD n
             0xC6 => {
                 let x = self.fetch8(mem);
                 self.regs.a = alu::add8(&mut self.regs.flags, self.regs.a, x);
-                2
+                8
             }
 
             // ADC r
@@ -318,21 +318,21 @@ impl Cpu {
             0x88..=0x8D | 0x8F => {
                 let r = self.regs.get8(opcode.yyy());
                 self.regs.a = alu::adc8(&mut self.regs.flags, self.regs.a, r);
-                1
+                4
             }
 
             // ADC [HL]
             0x8E => {
                 let x = mem.read8(self.regs.hl());
                 self.regs.a = alu::adc8(&mut self.regs.flags, self.regs.a, x);
-                2
+                8
             }
 
             // ADC n
             0xCE => {
                 let x = self.fetch8(mem);
                 self.regs.a = alu::adc8(&mut self.regs.flags, self.regs.a, x);
-                2
+                8
             }
 
             // SUB r
@@ -340,21 +340,21 @@ impl Cpu {
             0x90..=0x95 | 0x97 => {
                 let r = self.regs.get8(opcode.yyy());
                 self.regs.a = alu::sub8(&mut self.regs.flags, self.regs.a, r);
-                1
+                4
             }
 
             // SUB [HL]
             0x96 => {
                 let x = mem.read8(self.regs.hl());
                 self.regs.a = alu::sub8(&mut self.regs.flags, self.regs.a, x);
-                2
+                8
             }
 
             // SUB n
             0xD6 => {
                 let x = self.fetch8(mem);
                 self.regs.a = alu::sub8(&mut self.regs.flags, self.regs.a, x);
-                2
+                8
             }
 
             // SBC r
@@ -362,21 +362,21 @@ impl Cpu {
             0x98..=0x9D | 0x9F => {
                 let r = self.regs.get8(opcode.yyy());
                 self.regs.a = alu::sbc8(&mut self.regs.flags, self.regs.a, r);
-                1
+                4
             }
 
             // SBC [HL]
             0x9E => {
                 let x = mem.read8(self.regs.hl());
                 self.regs.a = alu::sbc8(&mut self.regs.flags, self.regs.a, x);
-                2
+                8
             }
 
             // SBC n
             0xDE => {
                 let x = self.fetch8(mem);
                 self.regs.a = alu::sbc8(&mut self.regs.flags, self.regs.a, x);
-                2
+                8
             }
 
             // CP r
@@ -384,47 +384,47 @@ impl Cpu {
             0xB8..=0xBD | 0xBF => {
                 let r = self.regs.get8(opcode.yyy());
                 alu::sub8(&mut self.regs.flags, self.regs.a, r);
-                1
+                4
             }
 
             // CP [HL]
             0xBE => {
                 let value = mem.read8(self.regs.hl());
                 alu::sub8(&mut self.regs.flags, self.regs.a, value);
-                2
+                8
             }
 
             // CP n
             0xFE => {
                 let value = self.fetch8(mem);
                 alu::sub8(&mut self.regs.flags, self.regs.a, value);
-                2
+                8
             }
 
             // INC r
             // 0b00xxx100
             0x04 | 0x14 | 0x24 | 0x0C | 0x1C | 0x2C | 0x3C => {
                 self.update_reg(opcode.xxx(), alu::inc8);
-                1
+                4
             }
 
             // INC [HL]
             0x34 => {
                 self.update_mem_hl(mem, alu::inc8);
-                3
+                12
             }
 
             // DEC r
             // 0b00xxx101
             0x05 | 0x15 | 0x25 | 0x0D | 0x1D | 0x2D | 0x3D => {
                 self.update_reg(opcode.xxx(), alu::dec8);
-                1
+                4
             }
 
             // DEC [HL]
             0x35 => {
                 self.update_mem_hl(mem, alu::dec8);
-                3
+                12
             }
 
             // AND r
@@ -432,21 +432,21 @@ impl Cpu {
             0xA0..=0xA5 | 0xA7 => {
                 let r = self.regs.get8(opcode.yyy());
                 self.regs.a = alu::bitwise_and(&mut self.regs.flags, self.regs.a, r);
-                1
+                4
             }
 
             // AND [HL]
             0xA6 => {
                 let x = mem.read8(self.regs.hl());
                 self.regs.a = alu::bitwise_and(&mut self.regs.flags, self.regs.a, x);
-                2
+                8
             }
 
             // AND n
             0xE6 => {
                 let x = self.fetch8(mem);
                 self.regs.a = alu::bitwise_and(&mut self.regs.flags, self.regs.a, x);
-                2
+                8
             }
 
             // OR r
@@ -454,21 +454,21 @@ impl Cpu {
             0xB0..=0xB5 | 0xB7 => {
                 let r = self.regs.get8(opcode.yyy());
                 self.regs.a = alu::bitwise_or(&mut self.regs.flags, self.regs.a, r);
-                1
+                4
             }
 
             // OR [HL]
             0xB6 => {
                 let x = mem.read8(self.regs.hl());
                 self.regs.a = alu::bitwise_or(&mut self.regs.flags, self.regs.a, x);
-                2
+                8
             }
 
             // OR n
             0xF6 => {
                 let x = self.fetch8(mem);
                 self.regs.a = alu::bitwise_or(&mut self.regs.flags, self.regs.a, x);
-                2
+                8
             }
 
             // XOR r
@@ -476,33 +476,33 @@ impl Cpu {
             0xA8..=0xAD | 0xAF => {
                 let r = self.regs.get8(opcode.yyy());
                 self.regs.a = alu::bitwise_xor(&mut self.regs.flags, self.regs.a, r);
-                1
+                4
             }
 
             // XOR [HL]
             0xAE => {
                 let x = mem.read8(self.regs.hl());
                 self.regs.a = alu::bitwise_xor(&mut self.regs.flags, self.regs.a, x);
-                2
+                8
             }
 
             // XOR n
             0xEE => {
                 let x = self.fetch8(mem);
                 self.regs.a = alu::bitwise_xor(&mut self.regs.flags, self.regs.a, x);
-                2
+                8
             }
 
             // DAA
             0x27 => {
                 self.regs.a = alu::daa(&mut self.regs.flags, self.regs.a);
-                1
+                4
             }
 
             // CPL
             0x2F => {
                 self.regs.a = alu::bitwise_not(&mut self.regs.flags, self.regs.a);
-                1
+                4
             }
 
             // --- 16-BIT ARITHMETIC/LOGIC INSTRUCTIONS ---
@@ -514,21 +514,21 @@ impl Cpu {
                 let rr = self.regs.get16_with_sp(opcode.rr());
                 let result = alu::add16(&mut self.regs.flags, hl, rr);
                 self.regs.set_hl(result);
-                2
+                8
             }
 
             // INC rr
             0x03 | 0x13 | 0x23 | 0x33 => {
                 let rr = self.regs.get16_with_sp(opcode.rr());
                 self.regs.set16_with_sp(opcode.rr(), alu::inc16(rr));
-                2
+                8
             }
 
             // DEC rr
             0x0B | 0x1B | 0x2B | 0x3B => {
                 let rr = self.regs.get16_with_sp(opcode.rr());
                 self.regs.set16_with_sp(opcode.rr(), alu::dec16(rr));
-                2
+                8
             }
 
             // ADD SP, n
@@ -536,7 +536,7 @@ impl Cpu {
                 let n = self.fetch8(mem);
                 self.regs.sp =
                     alu::add16_with_signed_byte_operand(&mut self.regs.flags, self.regs.sp, n);
-                4
+                16
             }
 
             // --- ROTATE AND SHIFT INSTRUCTIONS ---
@@ -545,7 +545,7 @@ impl Cpu {
             0x07 => {
                 self.regs.a = alu::rotate_left(&mut self.regs.flags, self.regs.a);
                 self.regs.flags.set_zero(false); // for rotation instructions on register A, always zero flag = 0
-                1
+                4
             }
 
             // RLA
@@ -553,14 +553,14 @@ impl Cpu {
                 self.regs.a =
                     alu::rotate_left_through_carry_flag(&mut self.regs.flags, self.regs.a);
                 self.regs.flags.set_zero(false);
-                1
+                4
             }
 
             // RRCA
             0x0F => {
                 self.regs.a = alu::rotate_right(&mut self.regs.flags, self.regs.a);
                 self.regs.flags.set_zero(false);
-                1
+                4
             }
 
             // RRA
@@ -568,7 +568,7 @@ impl Cpu {
                 self.regs.a =
                     alu::rotate_right_through_carry_flag(&mut self.regs.flags, self.regs.a);
                 self.regs.flags.set_zero(false);
-                1
+                4
             }
 
             // --- JUMP INSTRUCTIONS ---
@@ -576,13 +576,13 @@ impl Cpu {
             // JP nn
             0xC3 => {
                 self.regs.pc = self.fetch16(mem);
-                4
+                16
             }
 
             // JP HL
             0xE9 => {
                 self.regs.pc = self.regs.hl();
-                1
+                4
             }
 
             // JP flag, nn
@@ -591,9 +591,9 @@ impl Cpu {
 
                 if self.evaluate_flag_condition(opcode.ff()) {
                     self.regs.pc = nn;
-                    4
+                    16
                 } else {
-                    3
+                    12
                 }
             }
 
@@ -601,7 +601,7 @@ impl Cpu {
             0x18 => {
                 let n = self.fetch8(mem) as i8 as i32;
                 self.regs.pc = ((self.regs.pc as u32 as i32) + n) as u16;
-                3
+                12
             }
 
             // JR flag, n
@@ -610,9 +610,9 @@ impl Cpu {
 
                 if self.evaluate_flag_condition(opcode.ff()) {
                     self.regs.pc = ((self.regs.pc as u32 as i32) + n) as u16;
-                    3
+                    12
                 } else {
-                    2
+                    8
                 }
             }
 
@@ -621,7 +621,7 @@ impl Cpu {
                 let nn = self.fetch16(mem);
                 self.stack_push(mem, self.regs.pc);
                 self.regs.pc = nn;
-                6
+                24
             }
 
             // CALL flag, nn
@@ -631,25 +631,25 @@ impl Cpu {
                 if self.evaluate_flag_condition(opcode.ff()) {
                     self.stack_push(mem, self.regs.pc);
                     self.regs.pc = nn;
-                    6
+                    24
                 } else {
-                    3
+                    12
                 }
             }
 
             // RET
             0xC9 => {
                 self.regs.pc = self.stack_pop(mem);
-                4
+                16
             }
 
             // RET flag
             0xC0 | 0xC8 | 0xD0 | 0xD8 => {
                 if self.evaluate_flag_condition(opcode.ff()) {
                     self.regs.pc = self.stack_pop(mem);
-                    5
+                    20
                 } else {
-                    2
+                    8
                 }
             }
 
@@ -657,7 +657,7 @@ impl Cpu {
             0xD9 => {
                 self.regs.pc = self.stack_pop(mem);
                 self.ime.enable(0);
-                4
+                16
             }
 
             // RST n
@@ -665,7 +665,7 @@ impl Cpu {
                 let n = opcode.0 - 0xC7;
                 self.stack_push(mem, self.regs.pc);
                 self.regs.pc = n as u16;
-                4
+                16
             }
 
             // --- CPU CONTROL INSTRUCTIONS ---
@@ -675,7 +675,7 @@ impl Cpu {
                 self.regs.flags.set_subtraction(false);
                 self.regs.flags.set_half_carry(false);
                 self.regs.flags.toggle_carry();
-                1
+                4
             }
 
             // SCF
@@ -683,16 +683,16 @@ impl Cpu {
                 self.regs.flags.set_subtraction(false);
                 self.regs.flags.set_half_carry(false);
                 self.regs.flags.set_carry(true);
-                1
+                4
             }
 
             // NOP
-            0x00 => 1,
+            0x00 => 4,
 
             // HALT
             0x76 => {
                 self.halted = true;
-                1
+                4
             }
 
             // STOP
@@ -706,37 +706,36 @@ impl Cpu {
                     self.regs.pc -= 1; // go back so that the fetched byte does get executed
                 }
                 self.halted = true; // TODO
-                1
+                4
             }
 
             // DI
             0xF3 => {
                 self.ime.disable(1);
-                1
+                4
             }
 
             // EI
             0xFB => {
                 self.ime.enable(1);
-                1
+                4
             }
 
             // CB prefix instructions
             0xCB => {
                 let suffix = Opcode(self.fetch8(mem));
                 log::trace!("following the 0xCB prefix is {}", suffix);
-                return self.execute_cb(suffix, mem);
+                self.execute_cb(suffix, mem)
             }
 
             0xD3 | 0xDB | 0xDD | 0xE3 | 0xE4 | 0xEB | 0xEC | 0xED | 0xF4 | 0xFC | 0xFD => {
                 log::warn!("unknown opcode {} encountered", opcode);
-                1
+                4
             }
         }
-        .into()
     }
 
-    fn execute_cb(&mut self, opcode: Opcode, mem: &mut Memory) -> MCycles {
+    fn execute_cb(&mut self, opcode: Opcode, mem: &mut Memory) -> Cycles {
         match opcode.0 {
             // --- ROTATE AND SHIFT INSTRUCTIONS ---
 
@@ -744,104 +743,104 @@ impl Cpu {
             // 0b00000yyy
             0x00..=0x05 | 0x07 => {
                 self.update_reg(opcode.yyy(), alu::rotate_left);
-                2
+                8
             }
 
             // RLC [HL]
             0x06 => {
                 self.update_mem_hl(mem, alu::rotate_left);
-                4
+                16
             }
 
             // RL r
             // 0b00010yyy
             0x10..=0x15 | 0x17 => {
                 self.update_reg(opcode.yyy(), alu::rotate_left_through_carry_flag);
-                2
+                8
             }
 
             // RL [HL]
             0x16 => {
                 self.update_mem_hl(mem, alu::rotate_left_through_carry_flag);
-                4
+                16
             }
 
             // RRC r
             // 0b00001yyy
             0x08..=0x0D | 0x0F => {
                 self.update_reg(opcode.yyy(), alu::rotate_right);
-                2
+                8
             }
 
             // RRC [HL]
             0x0E => {
                 self.update_mem_hl(mem, alu::rotate_right);
-                4
+                16
             }
 
             // RR r
             // 0b00011yyy
             0x18..=0x1D | 0x1F => {
                 self.update_reg(opcode.yyy(), alu::rotate_right_through_carry_flag);
-                2
+                8
             }
 
             // RR [HL]
             0x1E => {
                 self.update_mem_hl(mem, alu::rotate_right_through_carry_flag);
-                4
+                16
             }
 
             // SLA r
             // 0b00100yyy
             0x20..=0x25 | 0x27 => {
                 self.update_reg(opcode.yyy(), alu::shift_left);
-                2
+                8
             }
 
             // SLA [HL]
             0x26 => {
                 self.update_mem_hl(mem, alu::shift_left);
-                4
+                16
             }
 
             // SWAP r
             // 0b00110yyy
             0x30..=0x35 | 0x37 => {
                 self.update_reg(opcode.yyy(), alu::swap_nibbles);
-                2
+                8
             }
 
             // SWAP [HL]
             0x36 => {
                 self.update_mem_hl(mem, alu::swap_nibbles);
-                4
+                16
             }
 
             // SRA r
             // 0b00101yyy
             0x28..=0x2D | 0x2F => {
                 self.update_reg(opcode.yyy(), alu::shift_right_leave_msb);
-                2
+                8
             }
 
             // SRA [HL]
             0x2E => {
                 self.update_mem_hl(mem, alu::shift_right_leave_msb);
-                4
+                16
             }
 
             // SRL r
             // 0b00111yyy
             0x38..=0x3D | 0x3F => {
                 self.update_reg(opcode.yyy(), alu::shift_right_clear_msb);
-                2
+                8
             }
 
             // SRL [HL]
             0x3E => {
                 self.update_mem_hl(mem, alu::shift_right_clear_msb);
-                4
+                16
             }
 
             // --- SINGLE-BIT OPERATION INSTRUCTIONS ---
@@ -859,7 +858,7 @@ impl Cpu {
             | 0x7F => {
                 let r = self.regs.get8(opcode.yyy());
                 alu::test_bit(&mut self.regs.flags, r, opcode.xxx());
-                2
+                8
             }
 
             // BIT n, [HL]
@@ -867,7 +866,7 @@ impl Cpu {
             0x46 | 0x4E | 0x56 | 0x5E | 0x66 | 0x6E | 0x76 | 0x7E => {
                 let value = mem.read8(self.regs.hl());
                 alu::test_bit(&mut self.regs.flags, value, opcode.xxx());
-                3
+                12
             }
 
             // SET n, r
@@ -884,7 +883,7 @@ impl Cpu {
                 let r = self.regs.get8(opcode.yyy());
                 let result = modify_bit(r, opcode.xxx(), true);
                 self.regs.set8(opcode.yyy(), result);
-                2
+                8
             }
 
             // SET n, [HL]
@@ -893,7 +892,7 @@ impl Cpu {
                 let value = mem.read8(self.regs.hl());
                 let result = modify_bit(value, opcode.xxx(), true);
                 mem.write8(self.regs.hl(), result);
-                4
+                16
             }
 
             // RES n, r
@@ -910,7 +909,7 @@ impl Cpu {
                 let r = self.regs.get8(opcode.yyy());
                 let result = modify_bit(r, opcode.xxx(), false);
                 self.regs.set8(opcode.yyy(), result);
-                2
+                8
             }
 
             // RES n, [HL]
@@ -919,10 +918,9 @@ impl Cpu {
                 let value = mem.read8(self.regs.hl());
                 let result = modify_bit(value, opcode.xxx(), false);
                 mem.write8(self.regs.hl(), result);
-                4
+                16
             }
         }
-        .into()
     }
 
     fn fetch8(&mut self, mem: &Memory) -> u8 {

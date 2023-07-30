@@ -4,7 +4,6 @@ mod tests;
 mod bits;
 pub mod cartridge;
 mod cpu;
-mod cycles;
 mod gpu;
 mod interrupts;
 pub mod joypad;
@@ -17,13 +16,17 @@ mod timer;
 use std::io::Write;
 
 use cpu::Cpu;
-use cycles::MCycles;
 use joypad::Joypad;
 use mbc::MemoryBankController;
 use memory::Memory;
 use screen::Screen;
 
-const CYCLES_PER_SECOND: MCycles = MCycles(1048576);
+/// Type to represent some number of cycles. Note that this emulator exclusively uses T-Cycles
+/// rather than M-Cycles or any mixing of two.
+/// 1 M-Cycle = 4 T-Cycles
+type Cycles = u32;
+
+const CYCLES_PER_SECOND: Cycles = 4194304;
 
 /// Game Boy console emulator.
 pub struct GameBoy {
@@ -44,18 +47,18 @@ impl GameBoy {
     /// Update the state of the console - fetch and execute CPU instructions, handle interrupts, update the timer,
     /// handle rendering, etc. The `delta` parameter must express in seconds how long has passed since the last update.
     pub fn update(&mut self, delta: f32) {
-        let total_cycles_this_update = (delta * CYCLES_PER_SECOND.0 as f32) as u32;
+        let total_cycles_this_update = (delta * CYCLES_PER_SECOND as f32) as Cycles;
         let mut cycles_so_far = 0;
 
         while cycles_so_far < total_cycles_this_update {
             let cycles = self.step();
-            cycles_so_far += cycles.0;
+            cycles_so_far += cycles;
         }
     }
 
     /// Perform a single update 'step'. In other words, fetch and execute a single CPU instruction and based on the
     /// number of cycles required by that instruction, update the other components of the system.
-    pub fn step(&mut self) -> MCycles {
+    pub fn step(&mut self) -> Cycles {
         if let Some(dst) = &mut self.gb_doctor_logging {
             writeln!(
                 *dst,

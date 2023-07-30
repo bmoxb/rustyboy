@@ -1,4 +1,5 @@
-use derive_more::Display;
+use std::fmt;
+
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
@@ -42,11 +43,9 @@ impl Interrupts {
     }
 }
 
-#[derive(Debug, Display, Copy, Clone, FromPrimitive)]
-#[display(fmt = "{} interrupt")]
+#[derive(Debug, Copy, Clone, FromPrimitive)]
 pub enum Interrupt {
     VBlank,
-    #[display(fmt = "LCD STAT")]
     LcdStat,
     Timer,
     Serial,
@@ -62,5 +61,17 @@ impl Interrupt {
     /// Get the number of the bit for this interrupt in the interrupt enable and flag bytes.
     pub fn bit(&self) -> u8 {
         *self as u8
+    }
+}
+
+impl fmt::Display for Interrupt {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> fmt::Result {
+        match self {
+            Interrupt::VBlank => write!(f, "vertical blank interrupt"),
+            Interrupt::LcdStat => write!(f, "LCD STAT interrupt"),
+            Interrupt::Timer => write!(f, "timer interrupt"),
+            Interrupt::Serial => write!(f, "serial interrupt"),
+            Interrupt::Joypad => write!(f, "joypad interrupt"),
+        }
     }
 }

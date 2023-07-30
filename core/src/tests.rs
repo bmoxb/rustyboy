@@ -6,8 +6,6 @@ macro_rules! test_rom {
     ($name:ident, $file:literal) => {
         #[test]
         fn $name() {
-            let _ = env_logger::builder().is_test(true).try_init();
-
             let rom = include_bytes!(concat!(
                 env!("CARGO_MANIFEST_DIR"),
                 "/../gb-test-roms/",

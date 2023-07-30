@@ -7,19 +7,19 @@ use palettes::*;
 use vram::{VideoRam, TILE_WIDTH};
 
 use crate::bits::{bit_accessors, get_bits, modify_bits};
-use crate::cycles::TCycles;
 use crate::interrupts::{Interrupt, Interrupts};
 use crate::screen::{Screen, SCREEN_WIDTH};
+use crate::Cycles;
 
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
 use self::oam::{Sprite, SPRITE_COUNT};
 
-const HBLANK_PERIOD: TCycles = TCycles(204);
-const VBLANK_PERIOD: TCycles = TCycles(456); // single line
-const SEARCHING_OAM_PERIOD: TCycles = TCycles(80);
-const TRANSFERRING_DATA_PERIOD: TCycles = TCycles(172);
+const HBLANK_PERIOD: Cycles = 204;
+const VBLANK_PERIOD: Cycles = 456; // single line
+const SEARCHING_OAM_PERIOD: Cycles = 80;
+const TRANSFERRING_DATA_PERIOD: Cycles = 172;
 
 pub struct Gpu {
     /// The screen to which the GPU will draw.
@@ -51,7 +51,7 @@ pub struct Gpu {
     /// 0xFF4B - Window X (position of the window).
     pub window_x: u8,
     /// Counter used to time transition between rendering states.
-    clock: TCycles,
+    clock: Cycles,
 }
 
 impl Gpu {
@@ -71,12 +71,12 @@ impl Gpu {
             obj_palette_1_data: Palette(0),
             window_y: 0,
             window_x: 0,
-            clock: TCycles(0),
+            clock: 0,
         }
     }
 
     /// Handle the transitions between rendering states and draw to the screen appropriately.
-    pub fn update(&mut self, interrupts: &mut Interrupts, cycles: TCycles) {
+    pub fn update(&mut self, interrupts: &mut Interrupts, cycles: Cycles) {
         self.clock += cycles;
 
         self.compare_ly_lyc(interrupts);

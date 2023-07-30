@@ -1,8 +1,8 @@
 use crate::bits::{get_bit, get_bits};
-use crate::cycles::MCycles;
 use crate::interrupts::{Interrupt, Interrupts};
+use crate::Cycles;
 
-const DIVIDER_PERIOD: MCycles = MCycles(64);
+const DIVIDER_PERIOD: Cycles = 256;
 
 #[derive(Debug)]
 pub struct Timer {
@@ -10,8 +10,8 @@ pub struct Timer {
     pub counter: u8,
     pub modulo: u8,
     pub control: u8,
-    timer_cycles: MCycles,
-    divider_cycles: MCycles,
+    timer_cycles: Cycles,
+    divider_cycles: Cycles,
 }
 
 impl Timer {
@@ -21,12 +21,12 @@ impl Timer {
             counter: 0,
             modulo: 0,
             control: 0xF8,
-            timer_cycles: MCycles(0),
-            divider_cycles: MCycles(0),
+            timer_cycles: 0,
+            divider_cycles: 0,
         }
     }
 
-    pub fn update(&mut self, interrupts: &mut Interrupts, cycles: MCycles) {
+    pub fn update(&mut self, interrupts: &mut Interrupts, cycles: Cycles) {
         self.divider_cycles += cycles;
 
         while self.divider_cycles >= DIVIDER_PERIOD {
@@ -50,15 +50,14 @@ impl Timer {
         get_bit(self.control, 2)
     }
 
-    fn required_cycles(&self) -> MCycles {
+    fn required_cycles(&self) -> Cycles {
         match get_bits(self.control, 0, 2) {
-            0 => 256,
-            1 => 4,
-            2 => 16,
-            3 => 64,
+            0 => 1024,
+            1 => 16,
+            2 => 64,
+            3 => 256,
             _ => unreachable!(),
         }
-        .into()
     }
 
     fn increase_counter(&mut self, interrupts: &mut Interrupts) {
@@ -84,18 +83,18 @@ mod tests {
         let mut ints = Interrupts::new();
 
         // increment divider over time
-        t.update(&mut ints, MCycles(64));
+        t.update(&mut ints, 256);
         assert_eq!(t.divider, 1);
-        t.update(&mut ints, MCycles(75));
+        t.update(&mut ints, 300);
         assert_eq!(t.divider, 2);
-        t.update(&mut ints, MCycles(60));
+        t.update(&mut ints, 240);
         assert_eq!(t.divider, 3);
 
         t.control = 0xFF; // divider should increase regardless of the control byte
 
         // ensure divider wraps around to 0
         t.divider = 255;
-        t.update(&mut ints, MCycles(80));
+        t.update(&mut ints, 320);
         assert_eq!(t.divider, 0);
     }
 
@@ -109,12 +108,12 @@ mod tests {
 
         // ensure interrupt occurs and counter wraps around to modulo
 
-        t.update(&mut ints, MCycles(1000));
+        t.update(&mut ints, 4000);
         assert!(!ints.is_flagged(Interrupt::Timer));
 
         t.modulo = 50;
 
-        t.update(&mut ints, MCycles(25));
+        t.update(&mut ints, 100);
         assert!(ints.is_flagged(Interrupt::Timer));
         assert_eq!(t.counter, t.modulo);
 
@@ -125,7 +124,7 @@ mod tests {
         t.control = modify_bit(t.control, 2, false);
         assert!(!t.enabled());
 
-        t.update(&mut ints, MCycles(2000));
+        t.update(&mut ints, 8000);
         assert_eq!(t.counter, t.modulo); // counter unchanged
         assert!(!ints.is_flagged(Interrupt::Timer)); // no interrupt flagged
     }
