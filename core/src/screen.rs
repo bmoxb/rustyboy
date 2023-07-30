@@ -22,13 +22,29 @@ impl Screen {
             pixels: [Colour::DarkGrey; SCREEN_WIDTH * SCREEN_HEIGHT],
         }
     }
+
+    /// Get the colour of the pixel at the given coordinates. If the given coordinates are out of
+    /// bounds then black is returned.
     pub fn get(&self, x: u8, y: u8) -> Colour {
-        self.pixels[index(x, y)]
+        if within_bounds(x, y) {
+            self.pixels[index(x, y)]
+        } else {
+            Colour::Black
+        }
     }
 
+    /// Set the colour of the pixel at the given coordinates. If the given coordinates are out of
+    /// bounds then nothing happens.
     pub fn set(&mut self, x: u8, y: u8, colour: Colour) {
-        self.pixels[index(x, y)] = colour;
+        if within_bounds(x, y) {
+            self.pixels[index(x, y)] = colour;
+        }
     }
+}
+
+#[inline]
+fn within_bounds(x: u8, y: u8) -> bool {
+    x < SCREEN_WIDTH as u8 && y < SCREEN_HEIGHT as u8
 }
 
 #[inline]

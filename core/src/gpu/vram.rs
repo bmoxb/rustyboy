@@ -67,7 +67,7 @@ impl VideoRam {
     }
 
     fn read_tile_index(&self, offset: u16, x: u8, y: u8) -> u8 {
-        debug_assert!((x as usize) < TILE_MAP_WIDTH && (y as usize) < TILE_MAP_WIDTH);
+        debug_assert!(x < TILE_MAP_WIDTH as u8 && y < TILE_MAP_WIDTH as u8);
         self.read8(offset + (y as u16 * TILE_MAP_WIDTH as u16) + x as u16)
     }
 }
