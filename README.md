@@ -56,6 +56,7 @@ list of emulator frontends below).
   * [ ] Make internal emulator state (e.g., CPU registers) publicly accessible
   * [ ] Remove GB Doctor part of public API
   * [ ] Tidy up and better document GPU code
+  * [ ] Simplify cycle counting
 
 ## Working Games
 

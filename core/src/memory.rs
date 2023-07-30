@@ -1,4 +1,3 @@
-use crate::cycles::MCycles;
 use crate::gpu::oam::{OAM_END, OAM_SIZE, OAM_START};
 use crate::gpu::vram::{VRAM_END, VRAM_START};
 use crate::gpu::Gpu;
@@ -7,6 +6,7 @@ use crate::joypad::Joypad;
 use crate::mbc::MemoryBankController;
 use crate::serial::SerialTransfer;
 use crate::timer::Timer;
+use crate::Cycles;
 
 const WRAM_START: u16 = 0xC000;
 const WRAM_END: u16 = 0xDFFF;
@@ -19,7 +19,7 @@ const HRAM_START: u16 = 0xFF80;
 const HRAM_END: u16 = 0xFFFE;
 const HRAM_SIZE: usize = (HRAM_END - HRAM_START + 1) as usize;
 
-const OAM_TRANSFER_PERIOD: MCycles = MCycles(160);
+const OAM_TRANSFER_PERIOD: Cycles = 640;
 
 /// Represents both general-purpose RAM (working RAM and high RAM) as well as manages certain components of the full
 /// system that are interacted with via the memory bus (the GPU, timer, interrupt system, serial, joypad, and OAM
@@ -35,7 +35,7 @@ pub struct Memory {
     hram: [u8; HRAM_SIZE],
     oam_transfer_source: u8,
     pending_oam_transfer: bool,
-    oam_transfer_clock: MCycles,
+    oam_transfer_clock: Cycles,
 }
 
 impl Memory {
@@ -51,14 +51,14 @@ impl Memory {
             hram: [0; HRAM_SIZE],
             oam_transfer_source: 0,
             pending_oam_transfer: false,
-            oam_transfer_clock: MCycles(0),
+            oam_transfer_clock: 0,
         }
     }
 
     /// Update the components of the emulator interacted with via the memory bus given that a specified number of CPU
     /// cycles have elapsed.
-    pub fn update(&mut self, cycles: MCycles) {
-        self.gpu.update(&mut self.interrupts, cycles.into());
+    pub fn update(&mut self, cycles: Cycles) {
+        self.gpu.update(&mut self.interrupts, cycles);
         self.timer.update(&mut self.interrupts, cycles);
         self.serial.update();
         self.update_oam_transfer(cycles);
@@ -152,7 +152,7 @@ impl Memory {
             0xFF46 => {
                 self.oam_transfer_source = value;
                 self.pending_oam_transfer = true;
-                self.oam_transfer_clock.0 = 0;
+                self.oam_transfer_clock = 0;
             }
             0xFF47 => self.gpu.bg_palette_data.0 = value,
             0xFF48 => self.gpu.obj_palette_0_data.0 = value,
@@ -171,11 +171,11 @@ impl Memory {
         self.write8(addr + 1, msb);
     }
 
-    fn update_oam_transfer(&mut self, cycles: MCycles) {
+    fn update_oam_transfer(&mut self, cycles: Cycles) {
         if self.pending_oam_transfer {
-            self.oam_transfer_clock.0 += cycles.0;
+            self.oam_transfer_clock += cycles;
 
-            if self.oam_transfer_clock.0 >= OAM_TRANSFER_PERIOD.0 {
+            if self.oam_transfer_clock >= OAM_TRANSFER_PERIOD {
                 self.perform_oam_transfer();
                 self.pending_oam_transfer = false;
             }
