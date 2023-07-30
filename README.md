@@ -50,6 +50,12 @@ list of emulator frontends below).
   * [x] Desktop
   * [x] Web
   * [x] Terminal
+* [ ] Refactoring
+  * [ ] Remove unnecessary dependencies
+  * [ ] Simplify cartridge/MBC API
+  * [ ] Make internal emulator state (e.g., CPU registers) publicly accessible
+  * [ ] Remove GB Doctor part of public API
+  * [ ] Tidy up and better document GPU code
 
 ## Working Games
 
