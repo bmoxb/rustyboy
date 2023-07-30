@@ -126,7 +126,7 @@ impl Gpu {
     fn hblank(&mut self, interrupts: &mut Interrupts) -> LcdStatus {
         self.lcd_y += 1;
 
-        if self.lcd_y == 143 {
+        if self.lcd_y >= 143 {
             interrupts.flag(Interrupt::VBlank, true);
             LcdStatus::VBlank
         } else {
@@ -141,7 +141,7 @@ impl Gpu {
         self.lcd_y += 1;
 
         // if 10 lines done since final HBlank (i.e., 10 * VBLANK_PERIOD ticks elapsed)
-        if self.lcd_y > 153 {
+        if self.lcd_y >= 153 {
             self.lcd_y = 0;
             return LcdStatus::SearchingOAM;
         }
