@@ -1,6 +1,6 @@
 use crate::emulator::Emulator;
 
-use std::{fs::File, path::PathBuf};
+use std::path::PathBuf;
 
 use clap::Parser;
 
@@ -21,12 +21,7 @@ pub async fn run() {
 
     let mbc = mbc::from_cartridge(cart).unwrap();
 
-    let mut gb = GameBoy::new(mbc);
-
-    if let Some(path) = &args.gb_doctor_log {
-        let f = File::create(path).unwrap();
-        gb.enable_gb_doctor_logging(Box::new(f));
-    }
+    let gb = GameBoy::new(mbc);
 
     if let Some(_path) = &args.serial_log {
         unimplemented!() // TODO
@@ -45,8 +40,4 @@ pub struct Args {
     /// Write the text written to serial out by debugging/test ROMs to a given file
     #[arg(long)]
     serial_log: Option<PathBuf>,
-    /// Write Game Boy Doctor log lines to a given file - this option should be used with a very low speed setting
-    /// (e.g., 0.01) so as to avoid crashes
-    #[arg(long)]
-    gb_doctor_log: Option<PathBuf>,
 }
