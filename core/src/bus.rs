@@ -24,7 +24,7 @@ const OAM_TRANSFER_PERIOD: Cycles = 640;
 /// Represents both general-purpose RAM (working RAM and high RAM) as well as manages certain components of the full
 /// system that are interacted with via the memory bus (the GPU, timer, interrupt system, serial, joypad, and OAM
 /// transfer).
-pub struct Memory {
+pub struct MemoryBus {
     mbc: Box<dyn MemoryBankController>,
     pub gpu: Gpu,
     timer: Timer,
@@ -38,9 +38,9 @@ pub struct Memory {
     oam_transfer_clock: Cycles,
 }
 
-impl Memory {
+impl MemoryBus {
     pub fn new(mbc: Box<dyn MemoryBankController>) -> Self {
-        Memory {
+        MemoryBus {
             mbc,
             gpu: Gpu::new(),
             timer: Timer::new(),

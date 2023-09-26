@@ -32,13 +32,13 @@ fn main() {
                 gb.cpu.regs.l,
                 gb.cpu.regs.sp,
                 gb.cpu.regs.pc,
-                gb.mem.read8(gb.cpu.regs.pc),
-                gb.mem.read8(gb.cpu.regs.pc+1),
-                gb.mem.read8(gb.cpu.regs.pc+2),
-                gb.mem.read8(gb.cpu.regs.pc+3),
+                gb.bus.read8(gb.cpu.regs.pc),
+                gb.bus.read8(gb.cpu.regs.pc+1),
+                gb.bus.read8(gb.cpu.regs.pc+2),
+                gb.bus.read8(gb.cpu.regs.pc+3),
             ).unwrap();
 
-            if let Some(b) = gb.take_serial_byte() {
+            if let Some(b) = gb.bus.serial.take_byte() {
                 print!("{}", b as char);
             }
         }

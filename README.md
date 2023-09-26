@@ -53,8 +53,8 @@ list of emulator frontends below).
 * [ ] Refactoring
   * [x] Remove unnecessary dependencies
   * [ ] Simplify cartridge/MBC API
-  * [ ] Make internal emulator state (e.g., CPU registers) publicly accessible
-  * [ ] Remove GB Doctor part of public API
+  * [x] Make internal emulator state (e.g., CPU registers) publicly accessible
+  * [x] Remove GB Doctor part of public API
   * [ ] Tidy up and better document GPU code
   * [x] Simplify cycle counting
 

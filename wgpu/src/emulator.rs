@@ -93,7 +93,7 @@ impl Emulator {
             let x = (i % SCREEN_WIDTH) as u8;
             let y = (i / SCREEN_WIDTH) as u8;
 
-            let rgba = match self.gb.screen().get(x, y) {
+            let rgba = match self.gb.bus.gpu.screen.get(x, y) {
                 Colour::Black => [15, 56, 15, 255],
                 Colour::DarkGrey => [48, 98, 48, 255],
                 Colour::LightGrey => [139, 172, 15, 255],
@@ -134,17 +134,15 @@ impl Emulator {
     }
 
     fn handle_keyboard_input(&mut self, key: &VirtualKeyCode, down: bool) {
-        let jp = self.gb.joypad();
-
         match key {
-            VirtualKeyCode::X => jp.set_button(Button::A, down),
-            VirtualKeyCode::Z => jp.set_button(Button::B, down),
-            VirtualKeyCode::Return => jp.set_button(Button::Start, down),
-            VirtualKeyCode::RShift => jp.set_button(Button::Select, down),
-            VirtualKeyCode::Up => jp.set_button(Button::Up, down),
-            VirtualKeyCode::Down => jp.set_button(Button::Down, down),
-            VirtualKeyCode::Left => jp.set_button(Button::Left, down),
-            VirtualKeyCode::Right => jp.set_button(Button::Right, down),
+            VirtualKeyCode::X => self.gb.bus.joypad.set_button(Button::A, down),
+            VirtualKeyCode::Z => self.gb.bus.joypad.set_button(Button::B, down),
+            VirtualKeyCode::Return => self.gb.bus.joypad.set_button(Button::Start, down),
+            VirtualKeyCode::RShift => self.gb.bus.joypad.set_button(Button::Select, down),
+            VirtualKeyCode::Up => self.gb.bus.joypad.set_button(Button::Up, down),
+            VirtualKeyCode::Down => self.gb.bus.joypad.set_button(Button::Down, down),
+            VirtualKeyCode::Left => self.gb.bus.joypad.set_button(Button::Left, down),
+            VirtualKeyCode::Right => self.gb.bus.joypad.set_button(Button::Right, down),
             _ => {}
         };
     }

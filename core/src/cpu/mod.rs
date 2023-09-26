@@ -4,7 +4,7 @@ mod opcode;
 mod registers;
 
 use crate::bits::modify_bit;
-use crate::memory::Memory;
+use crate::bus::MemoryBus;
 use crate::Cycles;
 
 use ime::InterruptMasterEnable;
@@ -37,17 +37,17 @@ impl Cpu {
         }
     }
 
-    pub fn cycle(&mut self, mem: &mut Memory) -> Cycles {
+    pub fn cycle(&mut self, bus: &mut MemoryBus) -> Cycles {
         log::trace!("begin cycle - {}, {}", self.regs, self.ime);
 
-        let interrupt_cycles = self.handle_interrupts(mem);
+        let interrupt_cycles = self.handle_interrupts(bus);
 
         let cycles = if interrupt_cycles > 0 {
             interrupt_cycles
         } else if self.halted {
             4 // NOP
         } else {
-            self.fetch_execute(mem)
+            self.fetch_execute(bus)
         };
 
         self.ime.cycle();
@@ -57,17 +57,17 @@ impl Cpu {
         cycles
     }
 
-    fn handle_interrupts(&mut self, mem: &mut Memory) -> Cycles {
+    fn handle_interrupts(&mut self, bus: &mut MemoryBus) -> Cycles {
         let mut cycles = 0;
 
-        if let Some(int) = mem.interrupts.next_triggered_interrupt() {
+        if let Some(int) = bus.interrupts.next_triggered_interrupt() {
             if self.ime.enabled() {
                 log::debug!("{int} triggered and calling handler");
 
-                mem.interrupts.flag(int, false);
+                bus.interrupts.flag(int, false);
                 self.ime.disable(0);
 
-                self.stack_push(mem, self.regs.pc);
+                self.stack_push(bus, self.regs.pc);
                 self.regs.pc = int.handler_address();
 
                 cycles += 16;
@@ -86,8 +86,8 @@ impl Cpu {
         cycles
     }
 
-    fn fetch_execute(&mut self, mem: &mut Memory) -> Cycles {
-        let opcode = Opcode(self.fetch8(mem));
+    fn fetch_execute(&mut self, bus: &mut MemoryBus) -> Cycles {
+        let opcode = Opcode(self.fetch8(bus));
 
         log::debug!(
             "fetched opcode {} from address {:#04X}",
@@ -95,14 +95,14 @@ impl Cpu {
             self.regs.pc - 1
         );
 
-        let cycles = self.execute(opcode, mem);
+        let cycles = self.execute(opcode, bus);
 
         log::trace!("executed instruction with opcode {opcode} in {cycles}");
 
         cycles
     }
 
-    fn execute(&mut self, opcode: Opcode, mem: &mut Memory) -> Cycles {
+    fn execute(&mut self, opcode: Opcode, bus: &mut MemoryBus) -> Cycles {
         match opcode.0 {
             // --- 8-BIT LOAD INSTRUCTIONS ---
 
@@ -124,7 +124,7 @@ impl Cpu {
             // LD r, n
             // 0b00xxx110
             0x06 | 0x0E | 0x16 | 0x1E | 0x26 | 0x2E | 0x3E => {
-                let n = self.fetch8(mem);
+                let n = self.fetch8(bus);
                 self.regs.set8(opcode.xxx(), n);
                 8
             }
@@ -132,113 +132,113 @@ impl Cpu {
             // LD r, [HL]
             // 0b01xxx110
             0x46 | 0x4E | 0x56 | 0x5E | 0x66 | 0x6E | 0x7E => {
-                self.regs.set8(opcode.xxx(), mem.read8(self.regs.hl()));
+                self.regs.set8(opcode.xxx(), bus.read8(self.regs.hl()));
                 8
             }
 
             // LD [HL], r
             // 0b01110yyy
             0x70..=0x75 | 0x77 => {
-                mem.write8(self.regs.hl(), self.regs.get8(opcode.yyy()));
+                bus.write8(self.regs.hl(), self.regs.get8(opcode.yyy()));
                 8
             }
 
             // LD [HL], n
             0x36 => {
-                mem.write8(self.regs.hl(), self.fetch8(mem));
+                bus.write8(self.regs.hl(), self.fetch8(bus));
                 12
             }
 
             // LD A, [BC]
             0x0A => {
-                self.regs.a = mem.read8(self.regs.bc());
+                self.regs.a = bus.read8(self.regs.bc());
                 8
             }
 
             // LD A, [DE]
             0x1A => {
-                self.regs.a = mem.read8(self.regs.de());
+                self.regs.a = bus.read8(self.regs.de());
                 8
             }
 
             // LD [BC], A
             0x02 => {
-                mem.write8(self.regs.bc(), self.regs.a);
+                bus.write8(self.regs.bc(), self.regs.a);
                 8
             }
 
             // LD [DE], A
             0x12 => {
-                mem.write8(self.regs.de(), self.regs.a);
+                bus.write8(self.regs.de(), self.regs.a);
                 8
             }
 
             // LD A, [nn]
             0xFA => {
-                let nn = self.fetch16(mem);
-                self.regs.a = mem.read8(nn);
+                let nn = self.fetch16(bus);
+                self.regs.a = bus.read8(nn);
                 16
             }
 
             // LD [nn], A
             0xEA => {
-                let nn = self.fetch16(mem);
-                mem.write8(nn, self.regs.a);
+                let nn = self.fetch16(bus);
+                bus.write8(nn, self.regs.a);
                 16
             }
 
             // LDH A, [C]
             0xF2 => {
                 let addr = 0xFF00 + (self.regs.c as u16);
-                self.regs.a = mem.read8(addr);
+                self.regs.a = bus.read8(addr);
                 8
             }
 
             // LDH [C], A
             0xE2 => {
                 let addr = 0xFF00 + (self.regs.c as u16);
-                mem.write8(addr, self.regs.a);
+                bus.write8(addr, self.regs.a);
                 8
             }
 
             // LDH A, [n]
             0xF0 => {
-                let addr = 0xFF00 + (self.fetch8(mem) as u16);
-                self.regs.a = mem.read8(addr);
+                let addr = 0xFF00 + (self.fetch8(bus) as u16);
+                self.regs.a = bus.read8(addr);
                 12
             }
 
             // LDH [n], A
             0xE0 => {
-                let addr = 0xFF00 + (self.fetch8(mem) as u16);
-                mem.write8(addr, self.regs.a);
+                let addr = 0xFF00 + (self.fetch8(bus) as u16);
+                bus.write8(addr, self.regs.a);
                 12
             }
 
             // LD A, [HL-]
             0x3A => {
-                self.regs.a = mem.read8(self.regs.hl());
+                self.regs.a = bus.read8(self.regs.hl());
                 self.regs.set_hl(self.regs.hl() - 1);
                 8
             }
 
             // LD [HL-], A
             0x32 => {
-                mem.write8(self.regs.hl(), self.regs.a);
+                bus.write8(self.regs.hl(), self.regs.a);
                 self.regs.set_hl(self.regs.hl() - 1);
                 8
             }
 
             // LD A, [HL+]
             0x2A => {
-                self.regs.a = mem.read8(self.regs.hl());
+                self.regs.a = bus.read8(self.regs.hl());
                 self.regs.set_hl(self.regs.hl() + 1);
                 8
             }
 
             // LD [HL+], A
             0x22 => {
-                mem.write8(self.regs.hl(), self.regs.a);
+                bus.write8(self.regs.hl(), self.regs.a);
                 self.regs.set_hl(self.regs.hl() + 1);
                 8
             }
@@ -248,20 +248,20 @@ impl Cpu {
             // LD rr, nn
             // 0b00xx0001
             0x01 | 0x11 | 0x21 | 0x31 => {
-                let nn = self.fetch16(mem);
+                let nn = self.fetch16(bus);
                 self.regs.set16_with_sp(opcode.rr(), nn);
                 12
             }
 
             // LD [nn], SP
             0x08 => {
-                mem.write16(self.fetch16(mem), self.regs.sp);
+                bus.write16(self.fetch16(bus), self.regs.sp);
                 20
             }
 
             // LD HL, SP+n
             0xF8 => {
-                let n = self.fetch8(mem);
+                let n = self.fetch8(bus);
                 let result =
                     alu::add16_with_signed_byte_operand(&mut self.regs.flags, self.regs.sp, n);
                 self.regs.set_hl(result);
@@ -277,14 +277,14 @@ impl Cpu {
             // PUSH rr
             // 0b11xx0101
             0xC5 | 0xD5 | 0xE5 | 0xF5 => {
-                self.stack_push(mem, self.regs.get16_with_af(opcode.rr()));
+                self.stack_push(bus, self.regs.get16_with_af(opcode.rr()));
                 16
             }
 
             // POP rr
             // 0b11xx0001
             0xC1 | 0xD1 | 0xE1 | 0xF1 => {
-                let value = self.stack_pop(mem);
+                let value = self.stack_pop(bus);
                 self.regs.set16_with_af(opcode.rr(), value);
                 12
             }
@@ -301,14 +301,14 @@ impl Cpu {
 
             // ADD [HL]
             0x86 => {
-                let x = mem.read8(self.regs.hl());
+                let x = bus.read8(self.regs.hl());
                 self.regs.a = alu::add8(&mut self.regs.flags, self.regs.a, x);
                 8
             }
 
             // ADD n
             0xC6 => {
-                let x = self.fetch8(mem);
+                let x = self.fetch8(bus);
                 self.regs.a = alu::add8(&mut self.regs.flags, self.regs.a, x);
                 8
             }
@@ -323,14 +323,14 @@ impl Cpu {
 
             // ADC [HL]
             0x8E => {
-                let x = mem.read8(self.regs.hl());
+                let x = bus.read8(self.regs.hl());
                 self.regs.a = alu::adc8(&mut self.regs.flags, self.regs.a, x);
                 8
             }
 
             // ADC n
             0xCE => {
-                let x = self.fetch8(mem);
+                let x = self.fetch8(bus);
                 self.regs.a = alu::adc8(&mut self.regs.flags, self.regs.a, x);
                 8
             }
@@ -345,14 +345,14 @@ impl Cpu {
 
             // SUB [HL]
             0x96 => {
-                let x = mem.read8(self.regs.hl());
+                let x = bus.read8(self.regs.hl());
                 self.regs.a = alu::sub8(&mut self.regs.flags, self.regs.a, x);
                 8
             }
 
             // SUB n
             0xD6 => {
-                let x = self.fetch8(mem);
+                let x = self.fetch8(bus);
                 self.regs.a = alu::sub8(&mut self.regs.flags, self.regs.a, x);
                 8
             }
@@ -367,14 +367,14 @@ impl Cpu {
 
             // SBC [HL]
             0x9E => {
-                let x = mem.read8(self.regs.hl());
+                let x = bus.read8(self.regs.hl());
                 self.regs.a = alu::sbc8(&mut self.regs.flags, self.regs.a, x);
                 8
             }
 
             // SBC n
             0xDE => {
-                let x = self.fetch8(mem);
+                let x = self.fetch8(bus);
                 self.regs.a = alu::sbc8(&mut self.regs.flags, self.regs.a, x);
                 8
             }
@@ -389,14 +389,14 @@ impl Cpu {
 
             // CP [HL]
             0xBE => {
-                let value = mem.read8(self.regs.hl());
+                let value = bus.read8(self.regs.hl());
                 alu::sub8(&mut self.regs.flags, self.regs.a, value);
                 8
             }
 
             // CP n
             0xFE => {
-                let value = self.fetch8(mem);
+                let value = self.fetch8(bus);
                 alu::sub8(&mut self.regs.flags, self.regs.a, value);
                 8
             }
@@ -410,7 +410,7 @@ impl Cpu {
 
             // INC [HL]
             0x34 => {
-                self.update_mem_hl(mem, alu::inc8);
+                self.update_ram_hl(bus, alu::inc8);
                 12
             }
 
@@ -423,7 +423,7 @@ impl Cpu {
 
             // DEC [HL]
             0x35 => {
-                self.update_mem_hl(mem, alu::dec8);
+                self.update_ram_hl(bus, alu::dec8);
                 12
             }
 
@@ -437,14 +437,14 @@ impl Cpu {
 
             // AND [HL]
             0xA6 => {
-                let x = mem.read8(self.regs.hl());
+                let x = bus.read8(self.regs.hl());
                 self.regs.a = alu::bitwise_and(&mut self.regs.flags, self.regs.a, x);
                 8
             }
 
             // AND n
             0xE6 => {
-                let x = self.fetch8(mem);
+                let x = self.fetch8(bus);
                 self.regs.a = alu::bitwise_and(&mut self.regs.flags, self.regs.a, x);
                 8
             }
@@ -459,14 +459,14 @@ impl Cpu {
 
             // OR [HL]
             0xB6 => {
-                let x = mem.read8(self.regs.hl());
+                let x = bus.read8(self.regs.hl());
                 self.regs.a = alu::bitwise_or(&mut self.regs.flags, self.regs.a, x);
                 8
             }
 
             // OR n
             0xF6 => {
-                let x = self.fetch8(mem);
+                let x = self.fetch8(bus);
                 self.regs.a = alu::bitwise_or(&mut self.regs.flags, self.regs.a, x);
                 8
             }
@@ -481,14 +481,14 @@ impl Cpu {
 
             // XOR [HL]
             0xAE => {
-                let x = mem.read8(self.regs.hl());
+                let x = bus.read8(self.regs.hl());
                 self.regs.a = alu::bitwise_xor(&mut self.regs.flags, self.regs.a, x);
                 8
             }
 
             // XOR n
             0xEE => {
-                let x = self.fetch8(mem);
+                let x = self.fetch8(bus);
                 self.regs.a = alu::bitwise_xor(&mut self.regs.flags, self.regs.a, x);
                 8
             }
@@ -533,7 +533,7 @@ impl Cpu {
 
             // ADD SP, n
             0xE8 => {
-                let n = self.fetch8(mem);
+                let n = self.fetch8(bus);
                 self.regs.sp =
                     alu::add16_with_signed_byte_operand(&mut self.regs.flags, self.regs.sp, n);
                 16
@@ -575,7 +575,7 @@ impl Cpu {
 
             // JP nn
             0xC3 => {
-                self.regs.pc = self.fetch16(mem);
+                self.regs.pc = self.fetch16(bus);
                 16
             }
 
@@ -587,7 +587,7 @@ impl Cpu {
 
             // JP flag, nn
             0xC2 | 0xCA | 0xD2 | 0xDA => {
-                let nn = self.fetch16(mem);
+                let nn = self.fetch16(bus);
 
                 if self.evaluate_flag_condition(opcode.ff()) {
                     self.regs.pc = nn;
@@ -599,14 +599,14 @@ impl Cpu {
 
             // JR n
             0x18 => {
-                let n = self.fetch8(mem) as i8 as i32;
+                let n = self.fetch8(bus) as i8 as i32;
                 self.regs.pc = ((self.regs.pc as u32 as i32) + n) as u16;
                 12
             }
 
             // JR flag, n
             0x20 | 0x28 | 0x30 | 0x38 => {
-                let n = self.fetch8(mem) as i8 as i32;
+                let n = self.fetch8(bus) as i8 as i32;
 
                 if self.evaluate_flag_condition(opcode.ff()) {
                     self.regs.pc = ((self.regs.pc as u32 as i32) + n) as u16;
@@ -618,18 +618,18 @@ impl Cpu {
 
             // CALL nn
             0xCD => {
-                let nn = self.fetch16(mem);
-                self.stack_push(mem, self.regs.pc);
+                let nn = self.fetch16(bus);
+                self.stack_push(bus, self.regs.pc);
                 self.regs.pc = nn;
                 24
             }
 
             // CALL flag, nn
             0xC4 | 0xCC | 0xD4 | 0xDC => {
-                let nn = self.fetch16(mem);
+                let nn = self.fetch16(bus);
 
                 if self.evaluate_flag_condition(opcode.ff()) {
-                    self.stack_push(mem, self.regs.pc);
+                    self.stack_push(bus, self.regs.pc);
                     self.regs.pc = nn;
                     24
                 } else {
@@ -639,14 +639,14 @@ impl Cpu {
 
             // RET
             0xC9 => {
-                self.regs.pc = self.stack_pop(mem);
+                self.regs.pc = self.stack_pop(bus);
                 16
             }
 
             // RET flag
             0xC0 | 0xC8 | 0xD0 | 0xD8 => {
                 if self.evaluate_flag_condition(opcode.ff()) {
-                    self.regs.pc = self.stack_pop(mem);
+                    self.regs.pc = self.stack_pop(bus);
                     20
                 } else {
                     8
@@ -655,7 +655,7 @@ impl Cpu {
 
             // RETI
             0xD9 => {
-                self.regs.pc = self.stack_pop(mem);
+                self.regs.pc = self.stack_pop(bus);
                 self.ime.enable(0);
                 16
             }
@@ -663,7 +663,7 @@ impl Cpu {
             // RST n
             0xC7 | 0xCF | 0xD7 | 0xDF | 0xE7 | 0xEF | 0xF7 | 0xFF => {
                 let n = opcode.0 - 0xC7;
-                self.stack_push(mem, self.regs.pc);
+                self.stack_push(bus, self.regs.pc);
                 self.regs.pc = n as u16;
                 16
             }
@@ -697,7 +697,7 @@ impl Cpu {
 
             // STOP
             0x10 => {
-                let n = self.fetch8(mem);
+                let n = self.fetch8(bus);
                 if n != 0x00 {
                     log::warn!(
                         "STOP instruction not followed by null byte - instead encountered {:#04X}",
@@ -723,9 +723,9 @@ impl Cpu {
 
             // CB prefix instructions
             0xCB => {
-                let suffix = Opcode(self.fetch8(mem));
+                let suffix = Opcode(self.fetch8(bus));
                 log::trace!("following the 0xCB prefix is {}", suffix);
-                self.execute_cb(suffix, mem)
+                self.execute_cb(suffix, bus)
             }
 
             0xD3 | 0xDB | 0xDD | 0xE3 | 0xE4 | 0xEB | 0xEC | 0xED | 0xF4 | 0xFC | 0xFD => {
@@ -735,7 +735,7 @@ impl Cpu {
         }
     }
 
-    fn execute_cb(&mut self, opcode: Opcode, mem: &mut Memory) -> Cycles {
+    fn execute_cb(&mut self, opcode: Opcode, bus: &mut MemoryBus) -> Cycles {
         match opcode.0 {
             // --- ROTATE AND SHIFT INSTRUCTIONS ---
 
@@ -748,7 +748,7 @@ impl Cpu {
 
             // RLC [HL]
             0x06 => {
-                self.update_mem_hl(mem, alu::rotate_left);
+                self.update_ram_hl(bus, alu::rotate_left);
                 16
             }
 
@@ -761,7 +761,7 @@ impl Cpu {
 
             // RL [HL]
             0x16 => {
-                self.update_mem_hl(mem, alu::rotate_left_through_carry_flag);
+                self.update_ram_hl(bus, alu::rotate_left_through_carry_flag);
                 16
             }
 
@@ -774,7 +774,7 @@ impl Cpu {
 
             // RRC [HL]
             0x0E => {
-                self.update_mem_hl(mem, alu::rotate_right);
+                self.update_ram_hl(bus, alu::rotate_right);
                 16
             }
 
@@ -787,7 +787,7 @@ impl Cpu {
 
             // RR [HL]
             0x1E => {
-                self.update_mem_hl(mem, alu::rotate_right_through_carry_flag);
+                self.update_ram_hl(bus, alu::rotate_right_through_carry_flag);
                 16
             }
 
@@ -800,7 +800,7 @@ impl Cpu {
 
             // SLA [HL]
             0x26 => {
-                self.update_mem_hl(mem, alu::shift_left);
+                self.update_ram_hl(bus, alu::shift_left);
                 16
             }
 
@@ -813,7 +813,7 @@ impl Cpu {
 
             // SWAP [HL]
             0x36 => {
-                self.update_mem_hl(mem, alu::swap_nibbles);
+                self.update_ram_hl(bus, alu::swap_nibbles);
                 16
             }
 
@@ -826,7 +826,7 @@ impl Cpu {
 
             // SRA [HL]
             0x2E => {
-                self.update_mem_hl(mem, alu::shift_right_leave_msb);
+                self.update_ram_hl(bus, alu::shift_right_leave_msb);
                 16
             }
 
@@ -839,7 +839,7 @@ impl Cpu {
 
             // SRL [HL]
             0x3E => {
-                self.update_mem_hl(mem, alu::shift_right_clear_msb);
+                self.update_ram_hl(bus, alu::shift_right_clear_msb);
                 16
             }
 
@@ -864,7 +864,7 @@ impl Cpu {
             // BIT n, [HL]
             // 0b01xxx110
             0x46 | 0x4E | 0x56 | 0x5E | 0x66 | 0x6E | 0x76 | 0x7E => {
-                let value = mem.read8(self.regs.hl());
+                let value = bus.read8(self.regs.hl());
                 alu::test_bit(&mut self.regs.flags, value, opcode.xxx());
                 12
             }
@@ -889,9 +889,9 @@ impl Cpu {
             // SET n, [HL]
             // 0b11xxx110
             0xC6 | 0xCE | 0xD6 | 0xDE | 0xE6 | 0xEE | 0xF6 | 0xFE => {
-                let value = mem.read8(self.regs.hl());
+                let value = bus.read8(self.regs.hl());
                 let result = modify_bit(value, opcode.xxx(), true);
-                mem.write8(self.regs.hl(), result);
+                bus.write8(self.regs.hl(), result);
                 16
             }
 
@@ -915,33 +915,33 @@ impl Cpu {
             // RES n, [HL]
             // 0b10xxx110
             0x86 | 0x8E | 0x96 | 0x9E | 0xA6 | 0xAE | 0xB6 | 0xBE => {
-                let value = mem.read8(self.regs.hl());
+                let value = bus.read8(self.regs.hl());
                 let result = modify_bit(value, opcode.xxx(), false);
-                mem.write8(self.regs.hl(), result);
+                bus.write8(self.regs.hl(), result);
                 16
             }
         }
     }
 
-    fn fetch8(&mut self, mem: &Memory) -> u8 {
-        let value = mem.read8(self.regs.pc);
+    fn fetch8(&mut self, bus: &MemoryBus) -> u8 {
+        let value = bus.read8(self.regs.pc);
         self.regs.pc += 1;
         value
     }
 
-    fn fetch16(&mut self, mem: &Memory) -> u16 {
-        let value = mem.read16(self.regs.pc);
+    fn fetch16(&mut self, bus: &MemoryBus) -> u16 {
+        let value = bus.read16(self.regs.pc);
         self.regs.pc += 2;
         value
     }
 
-    fn stack_push(&mut self, mem: &mut Memory, value: u16) {
+    fn stack_push(&mut self, bus: &mut MemoryBus, value: u16) {
         self.regs.sp -= 2;
-        mem.write16(self.regs.sp, value);
+        bus.write16(self.regs.sp, value);
     }
 
-    fn stack_pop(&mut self, mem: &mut Memory) -> u16 {
-        let value = mem.read16(self.regs.sp);
+    fn stack_pop(&mut self, bus: &mut MemoryBus) -> u16 {
+        let value = bus.read16(self.regs.sp);
         self.regs.sp += 2;
         value
     }
@@ -962,9 +962,9 @@ impl Cpu {
         self.regs.set8(reg_index, result);
     }
 
-    fn update_mem_hl(&mut self, mem: &mut Memory, f: impl Fn(&mut Flags, u8) -> u8) {
-        let x = mem.read8(self.regs.hl());
+    fn update_ram_hl(&mut self, bus: &mut MemoryBus, f: impl Fn(&mut Flags, u8) -> u8) {
+        let x = bus.read8(self.regs.hl());
         let result = f(&mut self.regs.flags, x);
-        mem.write8(self.regs.hl(), result);
+        bus.write8(self.regs.hl(), result);
     }
 }

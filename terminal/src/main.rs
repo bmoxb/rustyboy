@@ -111,8 +111,13 @@ impl Emulator {
         term_x: u16,
         term_y: u16,
     ) -> (char, style::Color, style::Color) {
-        let up = self.gb.screen().get(term_x as u8, term_y as u8 * 2);
-        let down = self.gb.screen().get(term_x as u8, term_y as u8 * 2 + 1);
+        let up = self.gb.bus.gpu.screen.get(term_x as u8, term_y as u8 * 2);
+        let down = self
+            .gb
+            .bus
+            .gpu
+            .screen
+            .get(term_x as u8, term_y as u8 * 2 + 1);
 
         let chr = if self.args.no_unicode {
             colours_to_ascii(up, down)
@@ -156,17 +161,15 @@ impl Emulator {
     }
 
     fn handle_key_event(&mut self, code: KeyCode, down: bool) {
-        let jp = self.gb.joypad();
-
         match code {
-            KeyCode::Char('x') => jp.set_button(Button::A, down),
-            KeyCode::Char('z') => jp.set_button(Button::B, down),
-            KeyCode::Enter => jp.set_button(Button::Start, down),
-            KeyCode::Backspace => jp.set_button(Button::Select, down),
-            KeyCode::Up => jp.set_button(Button::Up, down),
-            KeyCode::Down => jp.set_button(Button::Down, down),
-            KeyCode::Left => jp.set_button(Button::Left, down),
-            KeyCode::Right => jp.set_button(Button::Right, down),
+            KeyCode::Char('x') => self.gb.bus.joypad.set_button(Button::A, down),
+            KeyCode::Char('z') => self.gb.bus.joypad.set_button(Button::B, down),
+            KeyCode::Enter => self.gb.bus.joypad.set_button(Button::Start, down),
+            KeyCode::Backspace => self.gb.bus.joypad.set_button(Button::Select, down),
+            KeyCode::Up => self.gb.bus.joypad.set_button(Button::Up, down),
+            KeyCode::Down => self.gb.bus.joypad.set_button(Button::Down, down),
+            KeyCode::Left => self.gb.bus.joypad.set_button(Button::Left, down),
+            KeyCode::Right => self.gb.bus.joypad.set_button(Button::Right, down),
             KeyCode::Esc => {
                 self.continue_execution = false;
             }
