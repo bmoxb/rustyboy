@@ -25,7 +25,7 @@ macro_rules! test_rom {
 
                 cycles_since_last_log += 1;
 
-                if let Some(b) = gb.take_serial_byte() {
+                if let Some(b) = gb.bus.serial.take_byte() {
                     logged.push(b as char);
                     cycles_since_last_log = 0;
                 }

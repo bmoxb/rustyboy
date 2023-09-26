@@ -968,3 +968,9 @@ impl Cpu {
         bus.write8(self.regs.hl(), result);
     }
 }
+
+impl Default for Cpu {
+    fn default() -> Self {
+        Cpu::new()
+    }
+}

@@ -45,6 +45,12 @@ impl SpriteAttributeTable {
     }
 }
 
+impl Default for SpriteAttributeTable {
+    fn default() -> Self {
+        SpriteAttributeTable::new()
+    }
+}
+
 pub struct Sprite {
     pub y: u8,
     pub x: u8,

@@ -278,10 +278,15 @@ impl Gpu {
     }
 }
 
+impl Default for Gpu {
+    fn default() -> Self {
+        Gpu::new()
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct LcdControlRegister(pub u8);
 
-#[allow(dead_code)]
 impl LcdControlRegister {
     bit_accessors!(0, bg_and_window_enable);
     bit_accessors!(1, obj_enable);
@@ -296,7 +301,6 @@ impl LcdControlRegister {
 #[derive(Clone, Copy)]
 pub struct LcdStatusRegister(pub u8);
 
-#[allow(dead_code)]
 impl LcdStatusRegister {
     fn status(&self) -> LcdStatus {
         LcdStatus::from_u8(get_bits(self.0, 0, 2)).unwrap()

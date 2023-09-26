@@ -25,7 +25,6 @@ impl Interrupts {
         self.flag = modify_bit(self.flag, int.bit(), value);
     }
 
-    #[allow(dead_code)]
     pub fn is_flagged(&self, int: Interrupt) -> bool {
         get_bit(self.flag, int.bit())
     }
@@ -40,6 +39,12 @@ impl Interrupts {
 
         let index = triggered.trailing_zeros();
         Interrupt::from_u32(index)
+    }
+}
+
+impl Default for Interrupts {
+    fn default() -> Self {
+        Interrupts::new()
     }
 }
 

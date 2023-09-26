@@ -16,7 +16,6 @@ pub struct Screen {
 }
 
 impl Screen {
-    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Screen {
             pixels: [Colour::DarkGrey; SCREEN_WIDTH * SCREEN_HEIGHT],
@@ -39,6 +38,12 @@ impl Screen {
         if within_bounds(x, y) {
             self.pixels[index(x, y)] = colour;
         }
+    }
+}
+
+impl Default for Screen {
+    fn default() -> Self {
+        Screen::new()
     }
 }
 

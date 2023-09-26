@@ -25,3 +25,9 @@ impl SerialTransfer {
         self.byte.take()
     }
 }
+
+impl Default for SerialTransfer {
+    fn default() -> Self {
+        SerialTransfer::new()
+    }
+}

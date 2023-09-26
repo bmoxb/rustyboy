@@ -56,7 +56,6 @@ impl VideoRam {
         self.read_tile_index(0x9800, x, y)
     }
 
-    #[allow(dead_code)]
     pub fn read_tile_index_from_map_9c00(&self, x: u8, y: u8) -> u8 {
         self.read_tile_index(0x9C00, x, y)
     }
@@ -69,6 +68,12 @@ impl VideoRam {
     fn read_tile_index(&self, offset: u16, x: u8, y: u8) -> u8 {
         debug_assert!(x < TILE_MAP_WIDTH as u8 && y < TILE_MAP_WIDTH as u8);
         self.read8(offset + (y as u16 * TILE_MAP_WIDTH as u16) + x as u16)
+    }
+}
+
+impl Default for VideoRam {
+    fn default() -> Self {
+        VideoRam::new()
     }
 }
 

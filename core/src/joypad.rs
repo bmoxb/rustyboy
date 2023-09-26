@@ -30,7 +30,6 @@ pub struct Joypad {
 }
 
 impl Joypad {
-    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Joypad {
             buttons: [false; BUTTON_COUNT],
@@ -76,9 +75,14 @@ impl Joypad {
         self.buttons[button as usize]
     }
 
-    #[allow(dead_code)]
     pub fn set_button(&mut self, button: Button, value: bool) {
         self.buttons[button as usize] = value;
+    }
+}
+
+impl Default for Joypad {
+    fn default() -> Self {
+        Joypad::new()
     }
 }
 
