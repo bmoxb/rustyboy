@@ -171,6 +171,7 @@ impl Gpu {
         }
     }
 
+    /// Draw a single scanline (background, window, and sprite layers).
     fn draw_scanline(&mut self) {
         self.draw_background_scanline();
         self.draw_sprites_scanline();
@@ -185,7 +186,12 @@ impl Gpu {
         for x in (0..(SCREEN_WIDTH + TILE_WIDTH) as u8).step_by(TILE_WIDTH) {
             let map_x = x.wrapping_add(self.viewport_x) / TILE_WIDTH as u8;
             let map_y = self.lcd_y.wrapping_add(self.viewport_y) / TILE_WIDTH as u8;
-            let tile_index = self.vram.read_tile_index_from_map_9800(map_x, map_y);
+
+            let tile_index = if self.lcd_control.bg_tile_map_area() {
+                self.vram.read_tile_index_from_map_9c00(map_x, map_y)
+            } else {
+                self.vram.read_tile_index_from_map_9800(map_x, map_y)
+            };
             let line_number = self.lcd_y.wrapping_add(self.viewport_y) % TILE_WIDTH as u8;
 
             let colour_ids = if self.lcd_control.bg_and_window_tile_data_area() {
