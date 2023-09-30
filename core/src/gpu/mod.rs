@@ -192,34 +192,12 @@ impl Gpu {
         }
 
         for x in (0..(SCREEN_WIDTH + TILE_WIDTH) as u8).step_by(TILE_WIDTH) {
-            let map_x = x.wrapping_add(self.viewport_x) / TILE_WIDTH as u8;
-            let map_y = self.lcd_y.wrapping_add(self.viewport_y) / TILE_WIDTH as u8;
-
-            let tile_index = if self.lcd_control.bg_tile_map_area() {
-                self.vram.read_tile_index_from_map_9c00(map_x, map_y)
-            } else {
-                self.vram.read_tile_index_from_map_9800(map_x, map_y)
-            };
-            let line_number = self.lcd_y.wrapping_add(self.viewport_y) % TILE_WIDTH as u8;
-
-            let colour_ids = if self.lcd_control.bg_and_window_tile_data_area() {
-                self.vram
-                    .read_tile_line_unsigned_index(tile_index, line_number)
-            } else {
-                self.vram
-                    .read_tile_line_signed_index(tile_index, line_number)
-            };
-
-            let draw_x = x.wrapping_sub(self.viewport_x % TILE_WIDTH as u8);
-
-            for (horizontal_offset, colour_id) in colour_ids.into_iter().enumerate() {
-                let colour = self.bg_palette_data.colour_for_id(colour_id);
-                self.screen.set(
-                    draw_x.wrapping_add(horizontal_offset as u8),
-                    self.lcd_y,
-                    colour,
-                );
-            }
+            self.draw_tile_map_scanline_pixel(
+                x,
+                self.viewport_x,
+                self.viewport_y,
+                self.lcd_control.bg_tile_map_area(),
+            );
         }
     }
 
@@ -233,45 +211,51 @@ impl Gpu {
         }
 
         for x in (0..(SCREEN_WIDTH + TILE_WIDTH) as u8).step_by(TILE_WIDTH) {
-            if self.window_x_plus_7 < 7 {
-                continue;
-            }
-
-            let map_x = x.wrapping_add(self.window_x_plus_7 - 7) / TILE_WIDTH as u8;
-            let map_y = self.lcd_y.wrapping_add(self.window_y) / TILE_WIDTH as u8;
-
-            let tile_index = if self.lcd_control.window_tile_map_area() {
-                self.vram.read_tile_index_from_map_9c00(map_x, map_y)
-            } else {
-                self.vram.read_tile_index_from_map_9800(map_x, map_y)
-            };
-            let line_number = self.lcd_y.wrapping_add(self.window_y) % TILE_WIDTH as u8;
-
-            let colour_ids = if self.lcd_control.bg_and_window_tile_data_area() {
-                self.vram
-                    .read_tile_line_unsigned_index(tile_index, line_number)
-            } else {
-                self.vram
-                    .read_tile_line_signed_index(tile_index, line_number)
-            };
-
-            let draw_x = x.wrapping_sub((self.window_x_plus_7 - 7) % TILE_WIDTH as u8);
-
-            for (horizontal_offset, colour_id) in colour_ids.into_iter().enumerate() {
-                let colour = self.bg_palette_data.colour_for_id(colour_id);
-                self.screen.set(
-                    draw_x.wrapping_add(horizontal_offset as u8),
-                    self.lcd_y,
-                    colour,
-                );
-            }
+            self.draw_tile_map_scanline_pixel(
+                x,
+                self.window_x_plus_7.wrapping_sub(7),
+                self.window_y,
+                self.lcd_control.window_tile_map_area(),
+            );
         }
     }
 
-    /*fn draw_tile_map_scanline(&mut self) {
-        // TODO: Code for during window and background scanlines is more or less the same - let's
-        // reduce that repetition.
-    }*/
+    fn draw_tile_map_scanline_pixel(
+        &mut self,
+        x: u8,
+        scroll_x: u8,
+        scroll_y: u8,
+        use_tile_map_9c00: bool,
+    ) {
+        let map_x = x.wrapping_add(scroll_x) / TILE_WIDTH as u8;
+        let map_y = self.lcd_y.wrapping_add(scroll_y) / TILE_WIDTH as u8;
+
+        let tile_index = if use_tile_map_9c00 {
+            self.vram.read_tile_index_from_map_9c00(map_x, map_y)
+        } else {
+            self.vram.read_tile_index_from_map_9800(map_x, map_y)
+        };
+        let line_number = self.lcd_y.wrapping_add(scroll_y) % TILE_WIDTH as u8;
+
+        let colour_ids = if self.lcd_control.bg_and_window_tile_data_area() {
+            self.vram
+                .read_tile_line_unsigned_index(tile_index, line_number)
+        } else {
+            self.vram
+                .read_tile_line_signed_index(tile_index, line_number)
+        };
+
+        let draw_x = x.wrapping_sub(scroll_x % TILE_WIDTH as u8);
+
+        for (horizontal_offset, colour_id) in colour_ids.into_iter().enumerate() {
+            let colour = self.bg_palette_data.colour_for_id(colour_id);
+            self.screen.set(
+                draw_x.wrapping_add(horizontal_offset as u8),
+                self.lcd_y,
+                colour,
+            );
+        }
+    }
 
     /// Draw a single scanline of the sprite layer.
     fn draw_sprites_scanline(&mut self) {
