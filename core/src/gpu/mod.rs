@@ -46,10 +46,13 @@ pub struct Gpu {
     pub obj_palette_0_data: Palette,
     /// 0xFF49 - Second of two object (sprite) colour palettes.
     pub obj_palette_1_data: Palette,
-    /// 0xFF4A - Window Y (position of the window).
+    /// 0xFF4A - Window Y (vertical position of the window).
     pub window_y: u8,
-    /// 0xFF4B - Window X (position of the window).
-    pub window_x: u8,
+    /// 0xFF4B - Window X + 7 (horizontal position of the window plus 7 pixels).
+    pub window_x_plus_7: u8,
+    /// True if at some point in this frame the value of Window Y was equal to LCD Y (checked at the start of
+    /// 'searching OAM' period).
+    window_y_trigger: bool,
     /// Counter used to time transition between rendering states.
     clock: Cycles,
 }
@@ -70,7 +73,8 @@ impl Gpu {
             obj_palette_0_data: Palette(0),
             obj_palette_1_data: Palette(0),
             window_y: 0,
-            window_x: 0,
+            window_x_plus_7: 0,
+            window_y_trigger: false,
             clock: 0,
         }
     }
@@ -140,6 +144,8 @@ impl Gpu {
     fn vblank(&mut self) -> LcdStatus {
         self.lcd_y += 1;
 
+        self.window_y_trigger = false;
+
         // if 10 lines done since final HBlank (i.e., 10 * VBLANK_PERIOD ticks elapsed)
         if self.lcd_y >= 153 {
             self.lcd_y = 0;
@@ -151,6 +157,7 @@ impl Gpu {
 
     // TODO
     fn searching_oam(&mut self) -> LcdStatus {
+        self.window_y_trigger = self.window_y_trigger || self.lcd_y == self.window_y;
         LcdStatus::TransferringData
     }
 
@@ -171,8 +178,10 @@ impl Gpu {
         }
     }
 
+    /// Draw a single scanline (background, window, and sprite layers).
     fn draw_scanline(&mut self) {
         self.draw_background_scanline();
+        self.draw_window_scanline();
         self.draw_sprites_scanline();
     }
 
@@ -183,29 +192,68 @@ impl Gpu {
         }
 
         for x in (0..(SCREEN_WIDTH + TILE_WIDTH) as u8).step_by(TILE_WIDTH) {
-            let map_x = x.wrapping_add(self.viewport_x) / TILE_WIDTH as u8;
-            let map_y = self.lcd_y.wrapping_add(self.viewport_y) / TILE_WIDTH as u8;
-            let tile_index = self.vram.read_tile_index_from_map_9800(map_x, map_y);
-            let line_number = self.lcd_y.wrapping_add(self.viewport_y) % TILE_WIDTH as u8;
+            self.draw_tile_map_scanline_pixel(
+                x,
+                self.viewport_x,
+                self.viewport_y,
+                self.lcd_control.bg_tile_map_area(),
+            );
+        }
+    }
 
-            let colour_ids = if self.lcd_control.bg_and_window_tile_data_area() {
-                self.vram
-                    .read_tile_line_unsigned_index(tile_index, line_number)
-            } else {
-                self.vram
-                    .read_tile_line_signed_index(tile_index, line_number)
-            };
+    /// Draw a single scanline of the window layer.
+    fn draw_window_scanline(&mut self) {
+        if !self.lcd_control.bg_and_window_enable()
+            || !self.lcd_control.window_enable()
+            || !self.window_y_trigger
+        {
+            return;
+        }
 
-            let draw_x = x.wrapping_sub(self.viewport_x % TILE_WIDTH as u8);
+        for x in (0..(SCREEN_WIDTH + TILE_WIDTH) as u8).step_by(TILE_WIDTH) {
+            self.draw_tile_map_scanline_pixel(
+                x,
+                self.window_x_plus_7.wrapping_sub(7),
+                self.window_y,
+                self.lcd_control.window_tile_map_area(),
+            );
+        }
+    }
 
-            for (colour_id_offset, colour_id) in colour_ids.into_iter().enumerate() {
-                let colour = self.bg_palette_data.colour_for_id(colour_id);
-                self.screen.set(
-                    draw_x.wrapping_add(colour_id_offset as u8),
-                    self.lcd_y,
-                    colour,
-                );
-            }
+    fn draw_tile_map_scanline_pixel(
+        &mut self,
+        x: u8,
+        scroll_x: u8,
+        scroll_y: u8,
+        use_tile_map_9c00: bool,
+    ) {
+        let map_x = x.wrapping_add(scroll_x) / TILE_WIDTH as u8;
+        let map_y = self.lcd_y.wrapping_add(scroll_y) / TILE_WIDTH as u8;
+
+        let tile_index = if use_tile_map_9c00 {
+            self.vram.read_tile_index_from_map_9c00(map_x, map_y)
+        } else {
+            self.vram.read_tile_index_from_map_9800(map_x, map_y)
+        };
+        let line_number = self.lcd_y.wrapping_add(scroll_y) % TILE_WIDTH as u8;
+
+        let colour_ids = if self.lcd_control.bg_and_window_tile_data_area() {
+            self.vram
+                .read_tile_line_unsigned_index(tile_index, line_number)
+        } else {
+            self.vram
+                .read_tile_line_signed_index(tile_index, line_number)
+        };
+
+        let draw_x = x.wrapping_sub(scroll_x % TILE_WIDTH as u8);
+
+        for (horizontal_offset, colour_id) in colour_ids.into_iter().enumerate() {
+            let colour = self.bg_palette_data.colour_for_id(colour_id);
+            self.screen.set(
+                draw_x.wrapping_add(horizontal_offset as u8),
+                self.lcd_y,
+                colour,
+            );
         }
     }
 

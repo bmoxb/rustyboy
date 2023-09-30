@@ -41,7 +41,7 @@ list of emulator frontends below).
 * [ ] Graphics
   * [x] Draw background
   * [x] Background scolling
-  * [ ] Draw window
+  * [x] Draw window
   * [x] Draw sprites
   * [x] Handle flipped sprites
   * [x] Handle 8x16 sprites
@@ -62,7 +62,7 @@ list of emulator frontends below).
 
 * [x] Tetris
 * [x] Dr. Mario
-* [ ] The Legend of Zelda: Link's Awakening
-* [ ] Kirby's Dream Land
-* [ ] Super Mario Land
+* [x] The Legend of Zelda: Link's Awakening
+* [x] Kirby's Dream Land
+* [x] Super Mario Land
 * [ ] Pokemon Red/Blue

@@ -99,7 +99,7 @@ impl MemoryBus {
             0xFF48 => self.gpu.obj_palette_0_data.0,
             0xFF49 => self.gpu.obj_palette_1_data.0,
             0xFF4A => self.gpu.window_y,
-            0xFF4B => self.gpu.window_x,
+            0xFF4B => self.gpu.window_x_plus_7,
             HRAM_START..=HRAM_END => self.hram[(addr - HRAM_START) as usize],
             0xFFFF => self.interrupts.enable,
             _ => {
@@ -158,7 +158,7 @@ impl MemoryBus {
             0xFF48 => self.gpu.obj_palette_0_data.0 = value,
             0xFF49 => self.gpu.obj_palette_1_data.0 = value,
             0xFF4A => self.gpu.window_y = value,
-            0xFF4B => self.gpu.window_x = value,
+            0xFF4B => self.gpu.window_x_plus_7 = value,
             HRAM_START..=HRAM_END => self.hram[(addr - HRAM_START) as usize] = value,
             0xFFFF => self.interrupts.enable = value,
             _ => log::trace!("{:#04X}", addr),
